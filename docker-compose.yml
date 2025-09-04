@@ -1,0 +1,90 @@
+services:
+  db:
+    image: postgres:15
+    container_name: tms_db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7
+    container_name: tms_redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: ./django_backend
+      dockerfile: Dockerfile
+    container_name: tms_web
+    restart: unless-stopped
+    env_file: .env
+    command: ["/app/scripts/entrypoint.sh", "web"]
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./django_backend:/app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  #worker:
+  #  build:
+  #    context: ./django_backend
+  #    dockerfile: Dockerfile
+  #  container_name: tms_worker
+  #  restart: unless-stopped
+  #  env_file: .env
+  #  command: ["/app/scripts/entrypoint.sh", "worker"]
+  #  volumes:
+  #    - ./django_backend:/app
+  #  depends_on:
+  #    web:
+  #      condition: service_started
+  #    db:
+  #      condition: service_healthy
+  #    redis:
+  #      condition: service_healthy
+
+  #beat:
+  #  build:
+  #    context: ./django_backend
+  #    dockerfile: Dockerfile
+  #  container_name: tms_beat
+  #  restart: unless-stopped
+  #  env_file: .env
+  #  command: ["/app/scripts/entrypoint.sh", "beat"]
+  #  volumes:
+  #    - ./django_backend:/app
+  #  depends_on:
+  #    web:
+  #      condition: service_started
+  #    db:
+  #      condition: service_healthy
+  #    redis:
+  #      condition: service_healthy
+
+volumes:
+  db_data:
