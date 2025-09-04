@@ -330,3 +330,342 @@ class UserModelValidationTest(TestCase):
         self.assertFalse(user.is_staff)
         self.assertFalse(user.is_superuser)
         self.assertEqual(user.display_name, "")
+
+
+class TeamAPITest(APITestCase):
+    """Test cases for Team API endpoints"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.client = APIClient()
+        
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            email="admin@example.com",
+            password="testpass123"
+        )
+        
+        self.member_user = User.objects.create_user(
+            username="member",
+            email="member@example.com",
+            password="testpass123"
+        )
+        
+        self.other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123"
+        )
+        
+        self.team = Team.objects.create(
+            name="Test Team",
+            description="A test team",
+            created_by=self.admin_user
+        )
+        self.team.members.add(self.admin_user, self.member_user)
+    
+    def authenticate(self, user):
+        """Helper method to authenticate a user"""
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    
+    def test_create_team(self):
+        """Test creating a new team"""
+        self.authenticate(self.admin_user)
+        
+        data = {
+            'name': 'New Team',
+            'description': 'A new team for testing'
+        }
+        
+        response = self.client.post('/api/teams/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], 'New Team')
+        self.assertEqual(response.data['created_by'], self.admin_user.id)
+    
+    def test_list_teams(self):
+        """Test listing teams"""
+        self.authenticate(self.member_user)
+        
+        response = self.client.get('/api/teams/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(len(response.data) >= 1)
+    
+    def test_get_team_detail(self):
+        """Test getting team details"""
+        self.authenticate(self.member_user)
+        
+        response = self.client.get(f'/api/teams/{self.team.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Test Team')
+        self.assertEqual(response.data['id'], self.team.id)
+    
+    def test_update_team_as_admin(self):
+        """Test updating team as admin"""
+        self.authenticate(self.admin_user)
+        
+        data = {
+            'name': 'Updated Team',
+            'description': 'Updated description'
+        }
+        
+        response = self.client.patch(f'/api/teams/{self.team.id}/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['name'], 'Updated Team')
+    
+    def test_update_team_as_member_forbidden(self):
+        """Test that regular members cannot update team"""
+        self.authenticate(self.member_user)
+        
+        data = {
+            'name': 'Hacked Team'
+        }
+        
+        response = self.client.patch(f'/api/teams/{self.team.id}/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_delete_team_as_admin(self):
+        """Test deleting team as admin"""
+        self.authenticate(self.admin_user)
+        
+        response = self.client.delete(f'/api/teams/{self.team.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Team.objects.filter(id=self.team.id).exists())
+
+
+class TeamMembershipAPITest(APITestCase):
+    """Test cases for Team membership management"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.client = APIClient()
+        
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            email="admin@example.com",
+            password="testpass123"
+        )
+        
+        self.member_user = User.objects.create_user(
+            username="member",
+            email="member@example.com",
+            password="testpass123"
+        )
+        
+        self.new_user = User.objects.create_user(
+            username="newuser",
+            email="newuser@example.com",
+            password="testpass123"
+        )
+        
+        self.team = Team.objects.create(
+            name="Test Team",
+            description="A test team",
+            created_by=self.admin_user
+        )
+        self.team.members.add(self.admin_user, self.member_user)
+    
+    def authenticate(self, user):
+        """Helper method to authenticate a user"""
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    
+    def test_add_member_as_admin(self):
+        """Test adding a member as admin"""
+        self.authenticate(self.admin_user)
+        
+        data = {'user_id': self.new_user.id}
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/add_member/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn(self.new_user, self.team.members.all())
+    
+    def test_add_member_as_regular_member_forbidden(self):
+        """Test that regular members cannot add members"""
+        self.authenticate(self.member_user)
+        
+        data = {'user_id': self.new_user.id}
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/add_member/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    
+    def test_remove_member_as_admin(self):
+        """Test removing a member as admin"""
+        self.authenticate(self.admin_user)
+        
+        data = {'user_id': self.member_user.id}
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/remove_member/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn(self.member_user, self.team.members.all())
+    
+    def test_leave_team_as_member(self):
+        """Test leaving team as regular member"""
+        self.authenticate(self.member_user)
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/leave/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertNotIn(self.member_user, self.team.members.all())
+    
+    def test_admin_cannot_leave_team(self):
+        """Test that admin cannot leave their own team"""
+        self.authenticate(self.admin_user)
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/leave/')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn(self.admin_user, self.team.members.all())
+    
+    def test_add_multiple_members(self):
+        """Test adding multiple members at once"""
+        self.authenticate(self.admin_user)
+        
+        user3 = User.objects.create_user(
+            username="user3",
+            email="user3@example.com",
+            password="testpass123"
+        )
+        
+        # Verify initial state - newuser should NOT be a member
+        self.assertNotIn(self.new_user, self.team.members.all())
+        self.assertNotIn(user3, self.team.members.all())
+        
+        data = {'user_ids': [self.new_user.id, user3.id]}
+        
+        # Send JSON data
+        response = self.client.post(
+            f'/api/teams/{self.team.id}/add_members/', 
+            data, 
+            format='json'
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Refresh team from database
+        self.team.refresh_from_db()
+        
+        # Both users should be added
+        self.assertIn(self.new_user, self.team.members.all())
+        self.assertIn(user3, self.team.members.all())
+    
+    def test_list_team_members(self):
+        """Test listing team members"""
+        self.authenticate(self.member_user)
+        
+        response = self.client.get(f'/api/teams/{self.team.id}/members/')
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)  # admin + member
+    
+    def test_prevent_duplicate_members(self):
+        """Test that duplicate members cannot be added"""
+        self.authenticate(self.admin_user)
+        
+        data = {'user_id': self.member_user.id}  # Already a member
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/add_member/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class TeamPermissionsAPITest(APITestCase):
+    """Test cases for Team permissions and security"""
+    
+    def setUp(self):
+        """Set up test data"""
+        self.client = APIClient()
+        
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            email="admin@example.com",
+            password="testpass123"
+        )
+        
+        self.outsider_user = User.objects.create_user(
+            username="outsider",
+            email="outsider@example.com",
+            password="testpass123"
+        )
+        
+        self.team = Team.objects.create(
+            name="Private Team",
+            description="A private team",
+            created_by=self.admin_user
+        )
+        self.team.members.add(self.admin_user)
+    
+    def authenticate(self, user):
+        """Helper method to authenticate a user"""
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {refresh.access_token}')
+    
+    def test_outsider_cannot_access_team_detail(self):
+        """Test that non-members cannot access team details"""
+        self.authenticate(self.outsider_user)
+        
+        response = self.client.get(f'/api/teams/{self.team.id}/')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_outsider_cannot_manage_members(self):
+        """Test that outsiders cannot manage team members"""
+        self.authenticate(self.outsider_user)
+        
+        data = {'user_id': self.outsider_user.id}
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/add_member/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_unauthenticated_access_forbidden(self):
+        """Test that unauthenticated users cannot access teams"""
+        response = self.client.get('/api/teams/')
+        
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    
+    def test_team_admin_permissions(self):
+        """Test that team admin has full permissions"""
+        self.authenticate(self.admin_user)
+        
+        # Admin should be able to update team
+        data = {'name': 'Updated Team Name'}
+        response = self.client.patch(f'/api/teams/{self.team.id}/', data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # Admin should be able to add members
+        new_user = User.objects.create_user(
+            username="newmember",
+            email="newmember@example.com",
+            password="testpass123"
+        )
+        data = {'user_id': new_user.id}
+        response = self.client.post(f'/api/teams/{self.team.id}/add_member/', data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_nonexistent_team_404(self):
+        """Test that accessing non-existent team returns 404"""
+        self.authenticate(self.admin_user)
+        
+        response = self.client.get('/api/teams/99999/')
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_invalid_user_id_in_add_member(self):
+        """Test adding non-existent user to team"""
+        self.authenticate(self.admin_user)
+        
+        data = {'user_id': 99999}  # Non-existent user
+        
+        response = self.client.post(f'/api/teams/{self.team.id}/add_member/', data)
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

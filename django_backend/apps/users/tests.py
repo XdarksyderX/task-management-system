@@ -14,6 +14,9 @@ from apps.users.tests.test_api import (
     UserModelAPITest,
     SimpleEndpointTest,
     UserModelValidationTest,
+    TeamAPITest,
+    TeamMembershipAPITest,
+    TeamPermissionsAPITest,
 )
 
 __all__ = [
@@ -32,4 +35,7 @@ __all__ = [
     'UserModelAPITest',
     'SimpleEndpointTest',
     'UserModelValidationTest',
+    'TeamAPITest',
+    'TeamMembershipAPITest',
+    'TeamPermissionsAPITest',
 ]

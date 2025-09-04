@@ -188,6 +188,108 @@ class TeamModelTest(TestCase):
         self.assertIn(self.user2, team.members.all())
 
 
+class TeamAdminTest(TestCase):
+    """Test cases for Team admin functionality"""
+    
+    def setUp(self):
+        self.admin_user = User.objects.create_user(
+            username="admin",
+            email="admin@example.com",
+            password="testpass123"
+        )
+        self.member_user = User.objects.create_user(
+            username="member",
+            email="member@example.com", 
+            password="testpass123"
+        )
+        self.other_user = User.objects.create_user(
+            username="other",
+            email="other@example.com",
+            password="testpass123"
+        )
+        
+        self.team = Team.objects.create(
+            name="Test Team",
+            description="A test team",
+            created_by=self.admin_user
+        )
+    
+    def test_team_creation_with_admin(self):
+        """Test creating team with admin"""
+        self.assertEqual(self.team.created_by, self.admin_user)
+        self.assertTrue(self.team.is_admin(self.admin_user))
+        self.assertFalse(self.team.is_admin(self.member_user))
+    
+    def test_is_admin_method(self):
+        """Test is_admin method"""
+        self.assertTrue(self.team.is_admin(self.admin_user))
+        self.assertFalse(self.team.is_admin(self.member_user))
+        self.assertFalse(self.team.is_admin(self.other_user))
+    
+    def test_add_member_method(self):
+        """Test add_member method"""
+        self.team.add_member(self.member_user)
+        self.assertTrue(self.team.is_member(self.member_user))
+        self.assertEqual(self.team.member_count, 1)
+    
+    def test_remove_member_method(self):
+        """Test remove_member method"""
+        self.team.add_member(self.member_user)
+        self.team.add_member(self.other_user)
+        
+        self.team.remove_member(self.member_user)
+        
+        self.assertFalse(self.team.is_member(self.member_user))
+        self.assertTrue(self.team.is_member(self.other_user))
+        self.assertEqual(self.team.member_count, 1)
+    
+    def test_is_member_method(self):
+        """Test is_member method"""
+        self.assertFalse(self.team.is_member(self.member_user))
+        
+        self.team.add_member(self.member_user)
+        self.assertTrue(self.team.is_member(self.member_user))
+    
+    def test_can_manage_method(self):
+        """Test can_manage method"""
+        # Admin can manage
+        self.assertTrue(self.team.can_manage(self.admin_user))
+        
+        # Regular members cannot manage
+        self.assertFalse(self.team.can_manage(self.member_user))
+        
+        # Staff users can manage
+        staff_user = User.objects.create_user(
+            username="staff",
+            email="staff@example.com",
+            password="testpass123",
+            is_staff=True
+        )
+        self.assertTrue(self.team.can_manage(staff_user))
+    
+    def test_member_count_property(self):
+        """Test member_count property"""
+        self.assertEqual(self.team.member_count, 0)
+        
+        self.team.add_member(self.member_user)
+        self.assertEqual(self.team.member_count, 1)
+        
+        self.team.add_member(self.other_user)
+        self.assertEqual(self.team.member_count, 2)
+        
+        self.team.remove_member(self.member_user)
+        self.assertEqual(self.team.member_count, 1)
+    
+    def test_team_admin_cascade_deletion(self):
+        """Test that deleting admin deletes the team"""
+        team_id = self.team.id
+        self.admin_user.delete()
+        
+        # Team should be deleted when admin is deleted
+        with self.assertRaises(Team.DoesNotExist):
+            Team.objects.get(id=team_id)
+
+
 class UserManagerTest(TestCase):
     """Test cases for custom User manager"""
     

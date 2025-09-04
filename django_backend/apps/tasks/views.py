@@ -45,15 +45,31 @@ def task_create(request):
         estimated_hours = request.POST.get('estimated_hours', 0)
         tag_ids = request.POST.getlist('tags')
         assigned_user_ids = request.POST.getlist('assigned_to')
+        assigned_team_id = request.POST.get('assigned_team')
         
         if title:
-            task = Task.objects.create(
-                title=title,
-                description=description,
-                priority=priority,
-                created_by=request.user,
-                estimated_hours=float(estimated_hours) if estimated_hours else 0
-            )
+            task_data = {
+                'title': title,
+                'description': description,
+                'priority': priority,
+                'created_by': request.user,
+                'estimated_hours': float(estimated_hours) if estimated_hours else 0
+            }
+            if assigned_team_id:
+                from apps.users.models import Team
+                try:
+                    team = Team.objects.get(id=assigned_team_id)
+                    # Check if user is member of the team
+                    if request.user in team.members.all() or team.created_by == request.user:
+                        task_data['assigned_team'] = team
+                    else:
+                        messages.error(request, 'You can only assign tasks to teams you belong to.')
+                        return redirect('tasks:task_create')
+                except Team.DoesNotExist:
+                    messages.error(request, 'Selected team does not exist.')
+                    return redirect('tasks:task_create')
+            
+            task = Task.objects.create(**task_data)
             
             if due_date:
                 from django.utils import timezone
@@ -137,7 +153,7 @@ def tag_list(request):
         else:
             messages.error(request, 'Tag name is required.')
         
-        return redirect('tag_list')
+        return redirect('tasks:tag_list')
     
     context = {
         'tags': tags,
@@ -213,7 +229,7 @@ def template_create(request):
             )
             
             messages.success(request, 'Template created successfully!')
-            return redirect('template_list')
+            return redirect('tasks:template_list')
         else:
             messages.error(request, 'Template name is required.')
     
@@ -307,6 +323,24 @@ def task_edit(request, pk):
                 pass
         else:
             task.due_date = None
+        
+        # Handle team assignment
+        assigned_team_id = request.POST.get('assigned_team')
+        if assigned_team_id:
+            from apps.users.models import Team
+            try:
+                team = Team.objects.get(id=assigned_team_id)
+                # Check if user is member of the team
+                if request.user in team.members.all() or team.created_by == request.user:
+                    task.assigned_team = team
+                else:
+                    messages.error(request, 'You can only assign tasks to teams you belong to.')
+                    return redirect('tasks:task_edit', pk=task.id)
+            except Team.DoesNotExist:
+                messages.error(request, 'Selected team does not exist.')
+                return redirect('tasks:task_edit', pk=task.id)
+        else:
+            task.assigned_team = None
         
         # Save task
         task.save()
