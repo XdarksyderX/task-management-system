@@ -1,11 +1,3 @@
-"""
-Main test runner for Users app
-
-This module imports all test cases from the tests directory.
-Run with: python manage.py test apps.users
-"""
-
-# Import all test cases from tests directory
 from apps.users.tests.test_models import (
     CustomUserModelTest,
     TeamModelTest,

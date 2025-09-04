@@ -1,11 +1,4 @@
-"""
-Main test runner for Tasks app
 
-This module imports all test cases from the tests directory.
-Run with: python manage.py test apps.tasks
-"""
-
-# Import all test cases from tests directory
 from apps.tasks.tests.test_models import (
     TagModelTest,
     TaskModelTest,

@@ -1,9 +1,3 @@
-"""
-Simplified API test suite for Task Management System
-
-Tests that work with the actual API structure.
-"""
-
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model

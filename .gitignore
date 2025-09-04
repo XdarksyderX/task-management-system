@@ -2,6 +2,12 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 ### Python ###
+
+#Celery beat schedule files
+celerybeat-schedule
+celerybeat-schedule-shm
+celerybeat-schedule-wal
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,9 +1,3 @@
-"""
-Simplified API test suite for Users
-
-Tests that work with the actual API structure for authentication and users.
-"""
-
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model

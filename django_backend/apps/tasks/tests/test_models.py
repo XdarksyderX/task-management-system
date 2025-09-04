@@ -1,9 +1,3 @@
-"""
-Simplified test suite for Task Management System
-
-Tests that match the actual model structure.
-"""
-
 from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model

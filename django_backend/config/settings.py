@@ -84,10 +84,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Custom User Model
 AUTH_USER_MODEL = "users.User"
 
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "info@taskmanagementsystem.dummy"
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "apps.common.authentication.CookieJWTAuthentication",  # Para cookies y headers Bearer
-        "rest_framework.authentication.SessionAuthentication",  # Para sesiones Django
+        "apps.common.authentication.CookieJWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
@@ -119,3 +122,20 @@ AUTH_COOKIE_REFRESH = "refresh_token"
 AUTH_COOKIE_SECURE = False
 AUTH_COOKIE_HTTPONLY = True
 AUTH_COOKIE_SAMESITE = "Lax"
+
+# Celery Beat Schedule
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    "daily-summary-07": {
+        "task": "apps.tasks.celery_tasks.generate_daily_summary",
+        "schedule": crontab(hour=7, minute=0),
+    },
+    "check-overdue-every-hour": {
+        "task": "apps.tasks.celery_tasks.check_overdue_tasks",
+        "schedule": crontab(minute=0),
+    },
+    "cleanup-archived-nightly": {
+        "task": "apps.tasks.celery_tasks.cleanup_archived_tasks",
+        "schedule": crontab(hour=3, minute=0),
+    },
+}

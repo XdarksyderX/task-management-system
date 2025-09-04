@@ -1,9 +1,3 @@
-"""
-Simplified test suite for Users models
-
-Tests that match the actual User and Team model structure.
-"""
-
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError

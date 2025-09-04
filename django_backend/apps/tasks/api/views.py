@@ -1,12 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.db import transaction
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
-
 from apps.tasks.models import Tag, Task, Comment, TaskAssignment, TaskHistory, TaskTemplate, TaskAction
+from apps.tasks.celery_tasks import send_task_notification
 from .serializers import (
     TagSerializer, TaskSerializer, CommentSerializer,
     AssignmentRequestSerializer, TaskHistorySerializer,
@@ -43,10 +44,33 @@ class TaskViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return scoped_tasks(self.request)
 
+    def perform_create(self, serializer):
+        task = serializer.save(created_by=self.request.user)
+        TaskHistory.objects.create(task=task, user=self.request.user, action=TaskAction.CREATED)
+        transaction.on_commit(lambda: send_task_notification.delay(task.id, "created"))
+
+    def perform_update(self, serializer):
+        old_status = self.get_object().status
+        task = serializer.save()
+
+        if old_status != task.status:
+            TaskHistory.objects.create(
+                task=task, 
+                user=self.request.user, 
+                action=TaskAction.STATUS_CHANGED,
+                metadata={"from": old_status, "to": task.status}
+            )
+            transaction.on_commit(lambda: send_task_notification.delay(task.id, "status_changed"))
+        else:
+            TaskHistory.objects.create(task=task, user=self.request.user, action=TaskAction.UPDATED)
+            transaction.on_commit(lambda: send_task_notification.delay(task.id, "updated"))
+
     def perform_destroy(self, instance):
         instance.is_archived = True
         instance.save(update_fields=["is_archived"])
         TaskHistory.objects.create(task=instance, user=self.request.user, action=TaskAction.ARCHIVED)
+        # Send notification when task is archived
+        transaction.on_commit(lambda: send_task_notification.delay(instance.id, "updated"))
 
     @action(detail=True, methods=["post"])
     def assign(self, request, pk=None):
@@ -57,10 +81,14 @@ class TaskViewSet(viewsets.ModelViewSet):
         role = ser.validated_data.get("role")
 
         users = list(User.objects.filter(id__in=ids))
+        newly_assigned = []
+        
         for u in users:
             obj, created = TaskAssignment.objects.get_or_create(
                 task=task, user=u, defaults={"assigned_by": request.user}
             )
+            if created:
+                newly_assigned.append(u.id)
             if role:
                 obj.role_in_task = role
                 if created:
@@ -71,6 +99,9 @@ class TaskViewSet(viewsets.ModelViewSet):
             task=task, user=request.user, action=TaskAction.UPDATED,
             metadata={"assigned_users": ids, **({"role": role} if role else {})}
         )
+        if newly_assigned:
+            transaction.on_commit(lambda: send_task_notification.delay(task.id, "assigned"))
+        
         return Response(TaskSerializer(task, context={"request": request}).data)
 
     @action(detail=True, methods=["post"])
@@ -82,6 +113,14 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         ser.is_valid(raise_exception=True)
         obj = ser.save()
+        TaskHistory.objects.create(
+            task=task, 
+            user=request.user, 
+            action=TaskAction.UPDATED,
+            metadata={"comment_added": True, "comment_id": obj.id}
+        )
+        transaction.on_commit(lambda: send_task_notification.delay(task.id, "comment_added"))
+        
         return Response(CommentSerializer(obj).data, status=status.HTTP_201_CREATED)
 
     @comments.mapping.get
@@ -104,3 +143,6 @@ class TaskTemplateViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = TaskTemplate.objects.all().order_by("name")
         return qs if self.request.user.is_staff else qs.filter(created_by=self.request.user)
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
