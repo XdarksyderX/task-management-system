@@ -34,6 +34,7 @@ RUN pip install --no-cache /wheels/*
 
 COPY . /app
 
-RUN chmod +x /app/scripts/entrypoint.sh
+RUN chmod +x /app/scripts/entrypoint.sh && \
+    chmod +x /app/scripts/run_tests.sh
 
 EXPOSE 8000

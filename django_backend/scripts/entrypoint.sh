@@ -18,5 +18,14 @@ case "${1:-web}" in
   web)    python manage.py runserver 0.0.0.0:8000 ;;
   worker) celery -A config worker -l info ;;
   beat)   celery -A config beat -l info ;;
+  test)   
+    # Configure test environment for Docker
+    export DJANGO_SETTINGS_MODULE=config.test_settings
+    export DATABASE_URL=sqlite:///test.db
+    
+    # Call the existing test script with the second argument
+    echo "🐳 Running tests in Docker container..."
+    scripts/run_tests.sh "${2:-all}"
+    ;;
   *)      exec "$@" ;;
 esac
