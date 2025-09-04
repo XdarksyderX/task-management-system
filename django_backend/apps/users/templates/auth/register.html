@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - TMS</title>
+    <title>Register - TMS</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -37,7 +37,7 @@
         }
         button {
             width: 100%;
-            background: #007bff;
+            background: #28a745;
             color: white;
             padding: 12px;
             border: none;
@@ -46,7 +46,7 @@
             margin-top: 10px;
         }
         button:hover {
-            background: #0056b3;
+            background: #218838;
         }
         .links {
             text-align: center;
@@ -70,16 +70,19 @@
 </head>
 <body>
     <div class="card">
-        <h2>Login</h2>
-        <form id="f-login">
+        <h2>Create Account</h2>
+        <form id="f-reg">
             <label>Username</label>
             <input name="username" required>
+            <label>Email</label>
+            <input name="email" type="email">
             <label>Password</label>
             <input name="password" type="password" required>
-            <button type="submit">Log in</button>
+            <button type="submit">Create account</button>
         </form>
         <div class="links">
-            <a href="/auth/register/">Create account</a>
+            <a href="{% url 'users:login' %}">Already have an account? Login</a> | 
+            <a href="{% url 'landing' %}">Home</a>
         </div>
         <pre id="out"></pre>
     </div>
@@ -92,16 +95,17 @@
         };
         
         const out = document.getElementById("out");
-        document.getElementById("f-login").addEventListener("submit", async (e) => {
+        document.getElementById("f-reg").addEventListener("submit", async (e) => {
             e.preventDefault();
             const fd = new FormData(e.target);
             const payload = {
-                username: fd.get("username"), 
+                username: fd.get("username"),
+                email: fd.get("email"),
                 password: fd.get("password")
             };
             
             try {
-                const resp = await fetch(API.login, {
+                const resp = await fetch(API.register, {
                     method: "POST", 
                     headers: {"Content-Type": "application/json"}, 
                     body: JSON.stringify(payload)
@@ -109,10 +113,9 @@
                 const data = await resp.json();
                 out.textContent = JSON.stringify(data, null, 2);
                 
-                if (resp.ok && data.access && data.refresh) {
-                    localStorage.setItem('access_token', data.access);
-                    localStorage.setItem('refresh_token', data.refresh);
-                    location.href = "/";
+                if (resp.ok) {
+                    alert("Account created successfully! Please login.");
+                    location.href = "{% url 'users:login' %}";
                 }
             } catch (error) {
                 out.textContent = "Error: " + error.message;

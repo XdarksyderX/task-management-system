@@ -185,8 +185,8 @@
             <nav>
                 <div class="logo">🎯 TMS</div>
                 <div class="nav-links">
-                    <a href="/auth/login/">Login</a>
-                    <a href="/auth/register/">Registro</a>
+                    <a href="{% url 'users:login' %}">Login</a>
+                    <a href="{% url 'users:register' %}">Registro</a>
                     <a href="/admin/">Admin</a>
                 </div>
             </nav>
@@ -198,8 +198,8 @@
             <h1>Task Management System</h1>
             <p>Organiza, gestiona y completa tus tareas de manera eficiente</p>
             <div class="cta-buttons">
-                <a href="/auth/register/" class="btn btn-primary">Comenzar Gratis</a>
-                <a href="/auth/login/" class="btn btn-secondary">Iniciar Sesión</a>
+                <a href="{% url 'users:register' %}" class="btn btn-primary">Comenzar Gratis</a>
+                <a href="{% url 'users:login' %}" class="btn btn-secondary">Iniciar Sesión</a>
             </div>
         </section>
 
@@ -234,9 +234,21 @@
     </main>
 
     <script>
+        // Cookie utility functions
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
         // Verificar estado de autenticación
         document.addEventListener('DOMContentLoaded', function() {
-            const token = localStorage.getItem('access_token');
+            const token = getCookie('access_token');
             if (token) {
                 // Si el usuario está autenticado, mostrar opciones diferentes
                 const navLinks = document.querySelector('.nav-links');
@@ -248,9 +260,16 @@
             }
         });
 
-        function logout() {
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout/', {
+                    method: 'POST',
+                    credentials: 'include'  // Include cookies in request
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            // Reload page to show logged out state
             location.reload();
         }
 

@@ -6,3 +6,16 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+class Team(models.Model):
+    name = models.CharField(max_length=150)
+    description = models.TextField(blank=True)
+    members = models.ManyToManyField(
+        User,
+        related_name="teams",
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name

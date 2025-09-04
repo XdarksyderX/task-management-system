@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Template - Task Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .breadcrumb {
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .edit-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-header h1 {
+            color: #333;
+            font-size: 1.8rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #c3e6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Task Management System</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/tasks/">Tasks</a>
+                <a href="/tasks/create/">New Task</a>
+                <a href="/tasks/templates/">Templates</a>
+                <a href="/tasks/tags/">Tags</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/dashboard/">Dashboard</a> &gt; 
+            <a href="/tasks/templates/">Templates</a> &gt; 
+            Edit Template
+        </div>
+
+        <div class="edit-form">
+            <div class="form-header">
+                <h1>Edit Task Template</h1>
+                <div>
+                    <a href="/tasks/templates/" class="btn btn-secondary">Cancel</a>
+                </div>
+            </div>
+
+            <div id="messages"></div>
+
+            <form id="template-form">
+                <div class="form-group">
+                    <label for="name">Template Name *</label>
+                    <input type="text" id="name" name="name" value="{{ template.name }}" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Describe this template...">{{ template.description }}</textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Default Priority</label>
+                        <select id="priority" name="priority">
+                            <option value="low" {% if template.template.priority == 'low' %}selected{% endif %}>Low</option>
+                            <option value="medium" {% if template.template.priority == 'medium' %}selected{% endif %}>Medium</option>
+                            <option value="high" {% if template.template.priority == 'high' %}selected{% endif %}>High</option>
+                            <option value="urgent" {% if template.template.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimated_hours">Estimated Hours</label>
+                        <input type="number" id="estimated_hours" name="estimated_hours" 
+                               value="{{ template.template.estimated_hours|default:'' }}" step="0.5" min="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="task_title">Default Task Title</label>
+                    <input type="text" id="task_title" name="task_title" 
+                           value="{{ template.template.title }}" placeholder="Default title for tasks created from this template">
+                </div>
+
+                <div class="form-group">
+                    <label for="task_description">Default Task Description</label>
+                    <textarea id="task_description" name="task_description" 
+                              placeholder="Default description for tasks created from this template">{{ template.template.description }}</textarea>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/tasks/templates/" class="btn btn-secondary">Cancel</a>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Template</button>
+                    <button type="submit" class="btn btn-primary">Update Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Form submission
+        document.getElementById('template-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await updateTemplate();
+        });
+
+        async function updateTemplate() {
+            const form = document.getElementById('template-form');
+            const formData = new FormData(form);
+            
+            const templateData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                template: {
+                    title: formData.get('task_title'),
+                    description: formData.get('task_description'),
+                    priority: formData.get('priority'),
+                    estimated_hours: parseFloat(formData.get('estimated_hours')) || 0
+                }
+            };
+
+            try {
+                showMessage('Updating template...', 'info');
+
+                const response = await fetch(`/api/templates/{{ template.id }}/`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(templateData)
+                });
+
+                if (response.ok) {
+                    showMessage('Template updated successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/tasks/templates/';
+                    }, 1500);
+                } else {
+                    const errorData = await response.json();
+                    showMessage(`Error: ${JSON.stringify(errorData)}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function confirmDelete() {
+            if (confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
+                try {
+                    const response = await fetch(`/api/templates/{{ template.id }}/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        credentials: 'include'
+                    });
+
+                    if (response.ok || response.status === 204) {
+                        showMessage('Template deleted successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/tasks/templates/';
+                        }, 1500);
+                    } else {
+                        showMessage('Error deleting template', 'error');
+                    }
+                } catch (error) {
+                    showMessage(`Error: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    messagesDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+
+        function logout() {
+            fetch('/api/auth/logout/', {
+                method: 'POST',
+                credentials: 'include'
+            }).then(() => {
+                window.location.href = '/accounts/login/';
+            });
+        }
+    </script>
+</body>
+</html>

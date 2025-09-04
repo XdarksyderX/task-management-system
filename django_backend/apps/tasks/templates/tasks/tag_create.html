@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Tag - Task Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .breadcrumb {
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .create-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-header h1 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-top: 0.5rem;
+        }
+        
+        .color-option {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+        }
+        
+        .color-option.selected {
+            border-color: #333;
+            box-shadow: 0 0 0 2px white, 0 0 0 4px #333;
+        }
+        
+        .color-option::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .color-option.selected::after {
+            opacity: 1;
+        }
+        
+        .tag-preview {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+        
+        .tag-preview-label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+        
+        .tag-item {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #c3e6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Task Management System</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/tasks/">Tasks</a>
+                <a href="/tasks/create/">New Task</a>
+                <a href="/tasks/templates/">Templates</a>
+                <a href="/tasks/tags/">Tags</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/dashboard/">Dashboard</a> &gt; 
+            <a href="/tasks/tags/">Tags</a> &gt; 
+            Create Tag
+        </div>
+
+        <div class="create-form">
+            <div class="form-header">
+                <h1>Create New Tag</h1>
+                <p>Tags help you organize and categorize your tasks for better management.</p>
+            </div>
+
+            <div id="messages"></div>
+
+            <form id="tag-form">
+                <div class="form-group">
+                    <label for="name">Tag Name *</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter tag name...">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" placeholder="Optional description for this tag..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Color</label>
+                    <div class="color-picker">
+                        <div class="color-option selected" data-color="#667eea" style="background: #667eea;"></div>
+                        <div class="color-option" data-color="#28a745" style="background: #28a745;"></div>
+                        <div class="color-option" data-color="#dc3545" style="background: #dc3545;"></div>
+                        <div class="color-option" data-color="#ffc107" style="background: #ffc107;"></div>
+                        <div class="color-option" data-color="#fd7e14" style="background: #fd7e14;"></div>
+                        <div class="color-option" data-color="#6f42c1" style="background: #6f42c1;"></div>
+                        <div class="color-option" data-color="#20c997" style="background: #20c997;"></div>
+                        <div class="color-option" data-color="#6c757d" style="background: #6c757d;"></div>
+                    </div>
+                </div>
+
+                <div class="tag-preview">
+                    <div class="tag-preview-label">Preview:</div>
+                    <div class="tag-item" id="tag-preview">New Tag</div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/tasks/tags/" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Tag</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let selectedColor = '#667eea';
+        
+        // Color picker functionality
+        document.querySelectorAll('.color-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                selectedColor = this.dataset.color;
+                updatePreview();
+            });
+        });
+        
+        // Update preview
+        function updatePreview() {
+            const name = document.getElementById('name').value || 'New Tag';
+            const preview = document.getElementById('tag-preview');
+            preview.textContent = name;
+            preview.style.background = selectedColor;
+        }
+        
+        document.getElementById('name').addEventListener('input', updatePreview);
+        
+        // Form submission
+        document.getElementById('tag-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createTag();
+        });
+        
+        async function createTag() {
+            const form = document.getElementById('tag-form');
+            const formData = new FormData(form);
+            
+            const tagData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                color: selectedColor
+            };
+            
+            try {
+                showMessage('Creating tag...', 'info');
+                
+                const response = await fetch('/api/tags/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(tagData)
+                });
+                
+                if (response.ok) {
+                    showMessage('Tag created successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/tasks/tags/';
+                    }, 1500);
+                } else {
+                    const errorData = await response.json();
+                    showMessage(`Error: ${JSON.stringify(errorData)}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    messagesDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+        
+        function logout() {
+            fetch('/api/auth/logout/', {
+                method: 'POST',
+                credentials: 'include'
+            }).then(() => {
+                window.location.href = '/accounts/login/';
+            });
+        }
+    </script>
+</body>
+</html>

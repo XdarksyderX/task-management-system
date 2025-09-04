@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ task.title }} - Task Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .breadcrumb {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover { text-decoration: underline; }
+        
+        .task-detail {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .task-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+        }
+        
+        .task-title {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .task-meta {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status, .priority {
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .status.todo { background: #e3f2fd; color: #1976d2; }
+        .status.in-progress { background: #fff3e0; color: #f57c00; }
+        .status.blocked { background: #ffebee; color: #d32f2f; }
+        .status.done { background: #e8f5e8; color: #388e3c; }
+        .status.archived { background: #f5f5f5; color: #757575; }
+        
+        .priority.low { background: #e8f5e8; color: #388e3c; }
+        .priority.medium { background: #fff3e0; color: #f57c00; }
+        .priority.high { background: #ffebee; color: #d32f2f; }
+        .priority.urgent { background: #fce4ec; color: #c2185b; }
+        
+        .task-content {
+            padding: 2rem;
+        }
+        
+        .section {
+            margin-bottom: 2rem;
+        }
+        
+        .section h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+        }
+        
+        .description {
+            background: #f8f9fa;
+            padding: 1.5rem;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            line-height: 1.6;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .info-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .tags {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .tag {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+        }
+        
+        .assigned-users {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .user-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+        }
+        
+        .actions {
+            padding: 2rem;
+            background: #f8f9fa;
+            border-top: 1px solid #dee2e6;
+            display: flex;
+            gap: 1rem;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .progress-bar {
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        @media (max-width: 768px) {
+            .task-meta {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .actions {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Task Management System</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/tasks/">Tasks</a>
+                <a href="/tasks/create/">New Task</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/dashboard/">Dashboard</a> > 
+            <a href="/tasks/">Tasks</a> > 
+            <strong>{{ task.title }}</strong>
+        </div>
+
+        <div class="task-detail">
+            <div class="task-header">
+                <h1 class="task-title">{{ task.title }}</h1>
+                <div class="task-meta">
+                    <div class="meta-item">
+                        <strong>Status:</strong>
+                        <span class="status {{ task.status|lower }}">{{ task.get_status_display }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Priority:</strong>
+                        <span class="priority {{ task.priority|lower }}">{{ task.get_priority_display }}</span>
+                    </div>
+                    <div class="meta-item">
+                        <strong>Created:</strong>
+                        <span>{{ task.created_at|date:"M d, Y" }}</span>
+                    </div>
+                    {% if task.due_date %}
+                    <div class="meta-item">
+                        <strong>Due:</strong>
+                        <span>{{ task.due_date|date:"M d, Y H:i" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="task-content">
+                {% if task.description %}
+                <div class="section">
+                    <h3>Description</h3>
+                    <div class="description">
+                        {{ task.description|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="section">
+                    <h3>Task Information</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-label">Created By</div>
+                            <div>{{ task.created_by.get_full_name|default:task.created_by.username }}</div>
+                        </div>
+                        
+                        {% if task.assigned_team %}
+                        <div class="info-item">
+                            <div class="info-label">Assigned Team</div>
+                            <div>{{ task.assigned_team.name }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if task.estimated_hours %}
+                        <div class="info-item">
+                            <div class="info-label">Estimated Hours</div>
+                            <div>{{ task.estimated_hours }} hours</div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if task.parent_task %}
+                        <div class="info-item">
+                            <div class="info-label">Parent Task</div>
+                            <div>
+                                <a href="{% url 'tasks:task_detail' task.parent_task.pk %}">
+                                    {{ task.parent_task.title }}
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if task.assigned_to.exists %}
+                <div class="section">
+                    <h3>Assigned To</h3>
+                    <div class="assigned-users">
+                        {% for user in task.assigned_to.all %}
+                        <span class="user-badge">
+                            {{ user.get_full_name|default:user.username }}
+                        </span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if task.tags.exists %}
+                <div class="section">
+                    <h3>Tags</h3>
+                    <div class="tags">
+                        {% for tag in task.tags.all %}
+                        <span class="tag">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if task.status != 'DONE' and task.estimated_hours %}
+                <div class="section">
+                    <h3>Progress</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {% if task.status == 'TODO' %}0%{% elif task.status == 'IN_PROGRESS' %}50%{% elif task.status == 'BLOCKED' %}25%{% else %}100%{% endif %}"></div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="actions">
+                <div>
+                    {% if task.created_by == user or user.is_staff %}
+                    <a href="{% url 'tasks:task_edit' task.pk %}" class="btn btn-primary">Edit Task</a>
+                    <a href="{% url 'tasks:task_delete' task.pk %}" class="btn btn-danger">Delete Task</a>
+                    {% endif %}
+                </div>
+                <div>
+                    <a href="/tasks/" class="btn btn-secondary">Back to Tasks</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout/', {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+            window.location.href = '/auth/login/';
+        }
+
+        function deleteTask() {
+            if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+                // Here you would implement the delete functionality
+                // For now, we'll just redirect to tasks list
+                window.location.href = '/tasks/';
+            }
+        }
+    </script>
+</body>
+</html>

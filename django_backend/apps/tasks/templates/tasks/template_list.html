@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Templates - Task Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .templates-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .template-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .template-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .template-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .template-name {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .template-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 1rem;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .btn:hover { background: #5a67d8; }
+        
+        .btn-sm {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover { background: #218838; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .empty-state h3 {
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .messages {
+            margin-bottom: 1rem;
+        }
+        
+        .message {
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Task Management System</div>
+            <nav class="nav-links">
+                <a href="/">Dashboard</a>
+                <a href="/tasks/">Tasks</a>
+                <a href="/tasks/create/">New Task</a>
+                <a href="/tasks/templates/">Templates</a>
+                <a href="/tasks/tags/">Tags</a>
+                <a href="/auth/logout/">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>Task Templates</h1>
+                <p>Reusable templates for common tasks</p>
+            </div>
+            <a href="/tasks/templates/create/" class="btn">Create Template</a>
+        </div>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {% if templates %}
+            <div class="templates-grid">
+                {% for template in templates %}
+                    <div class="template-card">
+                        <div class="template-header">
+                            <div class="template-name">{{ template.name }}</div>
+                        </div>
+                        
+                        <div style="color: #666; margin-bottom: 1rem;">
+                            {% if template.template.description %}
+                                {{ template.template.description|truncatewords:15 }}
+                            {% else %}
+                                No description provided
+                            {% endif %}
+                        </div>
+                        
+                        <div style="margin-bottom: 1rem;">
+                            <strong>Priority:</strong> 
+                            {% if template.template.priority %}
+                                {{ template.template.priority|title }}
+                            {% else %}
+                                Medium
+                            {% endif %}
+                        </div>
+                        
+                        {% if template.template.estimated_hours %}
+                            <div style="margin-bottom: 1rem;">
+                                <strong>Estimated Hours:</strong> {{ template.template.estimated_hours }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="template-meta">
+                            <span>Created {{ template.created_at|timesince }} ago</span>
+                            <button class="btn btn-sm btn-success" onclick="useTemplate('{{ template.pk }}')">
+                                Use Template
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <h3>No templates yet</h3>
+                <p>Create your first template to reuse common task configurations!</p>
+                <a href="/tasks/templates/create/" class="btn" style="margin-top: 1rem;">Create Template</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function useTemplate(templateId) {
+            // For now, just redirect to create task page
+            // In the future, this could pre-fill the form with template data
+            window.location.href = '/tasks/create/?template=' + templateId;
+        }
+    </script>
+</body>
+</html>
