@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Template - Task Management System</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f5f5; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .breadcrumb {
+            background: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .create-form {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-header h1 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-header p {
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .tags-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            min-height: 50px;
+        }
+        
+        .tag-item {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tag-remove {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        
+        .tag-input {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 120px;
+            padding: 0.5rem;
+        }
+        
+        .assigned-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            min-height: 50px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-item {
+            background: #28a745;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .user-remove {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            font-size: 1.2rem;
+            line-height: 1;
+        }
+        
+        .suggestions-dropdown {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            position: relative;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .template-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .preview-header {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        
+        .preview-task {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 1rem;
+            border-left: 4px solid #667eea;
+        }
+        
+        .preview-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .preview-meta {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .priority-urgent { color: #dc3545; }
+        .priority-high { color: #fd7e14; }
+        .priority-medium { color: #ffc107; }
+        .priority-low { color: #28a745; }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-end;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 2px solid #f0f0f0;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid #c3e6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Task Management System</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/tasks/">Tasks</a>
+                <a href="/tasks/create/">New Task</a>
+                <a href="/tasks/templates/">Templates</a>
+                <a href="/tasks/tags/">Tags</a>
+                <a href="#" onclick="logout()">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/dashboard/">Dashboard</a> &gt; 
+            <a href="/tasks/templates/">Templates</a> &gt; 
+            Create Template
+        </div>
+
+        <div class="create-form">
+            <div class="form-header">
+                <h1>Create Task Template</h1>
+                <p>Task templates help you quickly create similar tasks with predefined settings and content.</p>
+            </div>
+
+            <div id="messages"></div>
+
+            <form id="template-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="name">Template Name *</label>
+                    <input type="text" id="name" name="name" required placeholder="Enter template name...">
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Template Description</label>
+                    <textarea id="description" name="description" placeholder="Describe what this template is for..."></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Default Priority</label>
+                        <select id="priority" name="priority">
+                            {% for priority_key, priority_label in priority_choices %}
+                                <option value="{{ priority_key }}" {% if priority_key == 'medium' %}selected{% endif %}>
+                                    {{ priority_label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="estimated_hours">Estimated Hours</label>
+                        <input type="number" id="estimated_hours" name="estimated_hours" step="0.5" min="0" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="task_title">Default Task Title</label>
+                    <input type="text" id="task_title" name="task_title" placeholder="Default title for tasks created from this template">
+                </div>
+
+                <div class="form-group">
+                    <label for="task_description">Default Task Description</label>
+                    <textarea id="task_description" name="task_description" placeholder="Default description for tasks created from this template"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="tags">Default Tags</label>
+                    <div class="tags-input" id="tags-container">
+                        <input type="text" class="tag-input" placeholder="Add tags..." onkeypress="handleTagInput(event)">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Default Assigned Users</label>
+                    <div class="assigned-users" id="assigned-users-container">
+                        <!-- Users will be added here dynamically -->
+                    </div>
+                    <input type="text" id="user-search" placeholder="Search users to assign by default..." 
+                           onkeyup="searchUsers(this.value)" style="margin-top: 0.5rem;">
+                    <div id="user-suggestions" class="suggestions-dropdown" style="display: none;"></div>
+                </div>
+
+                <div class="template-preview">
+                    <div class="preview-header">Template Preview:</div>
+                    <div class="preview-task">
+                        <div class="preview-title" id="preview-title">New Task Template</div>
+                        <div class="preview-meta">
+                            <span class="priority-medium" id="preview-priority">Priority: Medium</span>
+                            <span id="preview-hours" style="display: none;"> | Estimated: 0 hours</span>
+                        </div>
+                        <div id="preview-description" style="margin-top: 0.5rem; color: #666; display: none;"></div>
+                        <div id="preview-tags" style="margin-top: 0.5rem; display: none;"></div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="{% url 'tasks:template_list' %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Create Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let selectedTags = [];
+        let selectedUsers = [];
+        
+        // Update preview in real time
+        function updatePreview() {
+            const name = document.getElementById('name').value || 'New Task Template';
+            const taskTitle = document.getElementById('task_title').value || name;
+            const taskDescription = document.getElementById('task_description').value;
+            const priority = document.getElementById('priority').value;
+            const estimatedHours = document.getElementById('estimated_hours').value;
+            
+            document.getElementById('preview-title').textContent = taskTitle;
+            
+            const priorityDisplay = document.getElementById('priority').selectedOptions[0].text;
+            const priorityElement = document.getElementById('preview-priority');
+            priorityElement.textContent = `Priority: ${priorityDisplay}`;
+            priorityElement.className = `priority-${priority}`;
+            
+            const hoursElement = document.getElementById('preview-hours');
+            if (estimatedHours && parseFloat(estimatedHours) > 0) {
+                hoursElement.textContent = ` | Estimated: ${estimatedHours} hours`;
+                hoursElement.style.display = 'inline';
+            } else {
+                hoursElement.style.display = 'none';
+            }
+            
+            const descElement = document.getElementById('preview-description');
+            if (taskDescription.trim()) {
+                descElement.textContent = taskDescription;
+                descElement.style.display = 'block';
+            } else {
+                descElement.style.display = 'none';
+            }
+            
+            const tagsElement = document.getElementById('preview-tags');
+            if (selectedTags.length > 0) {
+                tagsElement.innerHTML = selectedTags.map(tag => 
+                    `<span style="background: #667eea; color: white; padding: 0.25rem 0.5rem; border-radius: 12px; font-size: 0.8rem; margin-right: 0.5rem;">${tag}</span>`
+                ).join('');
+                tagsElement.style.display = 'block';
+            } else {
+                tagsElement.style.display = 'none';
+            }
+        }
+        
+        // Add event listeners for real-time preview
+        ['name', 'task_title', 'task_description', 'priority', 'estimated_hours'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updatePreview);
+        });
+        
+        // Tag handling
+        function handleTagInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const tagName = input.value.trim();
+                
+                if (tagName && !selectedTags.includes(tagName)) {
+                    addTag(tagName);
+                    input.value = '';
+                    updatePreview();
+                }
+            }
+        }
+        
+        function addTag(tagName) {
+            const tagElement = document.createElement('div');
+            tagElement.className = 'tag-item';
+            tagElement.innerHTML = `
+                ${tagName}
+                <button type="button" class="tag-remove" onclick="removeTag(this, '${tagName}')">×</button>
+            `;
+            
+            const input = document.querySelector('.tag-input');
+            input.parentNode.insertBefore(tagElement, input);
+            
+            selectedTags.push(tagName);
+        }
+        
+        function removeTag(button, tagName) {
+            button.parentElement.remove();
+            selectedTags = selectedTags.filter(tag => tag !== tagName);
+            updatePreview();
+        }
+        
+        // User handling
+        async function searchUsers(query) {
+            if (query.length < 2) {
+                document.getElementById('user-suggestions').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/?search=${encodeURIComponent(query)}`, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    showUserSuggestions(users.results || users);
+                }
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        }
+
+        function showUserSuggestions(users) {
+            const suggestions = document.getElementById('user-suggestions');
+            suggestions.innerHTML = '';
+            
+            users.forEach(user => {
+                if (!selectedUsers.find(u => u.id === user.id)) {
+                    const suggestion = document.createElement('div');
+                    suggestion.className = 'suggestion-item';
+                    suggestion.textContent = user.first_name ? `${user.first_name} ${user.last_name} (${user.username})` : user.username;
+                    suggestion.onclick = () => addUser(user);
+                    suggestions.appendChild(suggestion);
+                }
+            });
+            
+            suggestions.style.display = users.length > 0 ? 'block' : 'none';
+        }
+
+        function addUser(user) {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.innerHTML = `
+                ${user.first_name ? `${user.first_name} ${user.last_name}` : user.username}
+                <button type="button" class="user-remove" onclick="removeUser(this, ${user.id})">×</button>
+            `;
+            
+            document.getElementById('assigned-users-container').appendChild(userElement);
+            selectedUsers.push(user);
+            
+            document.getElementById('user-search').value = '';
+            document.getElementById('user-suggestions').style.display = 'none';
+        }
+
+        function removeUser(button, userId) {
+            button.parentElement.remove();
+            selectedUsers = selectedUsers.filter(user => user.id !== userId);
+        }
+        
+        // Form submission
+        document.getElementById('template-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await createTemplate();
+        });
+        
+        async function createTemplate() {
+            const form = document.getElementById('template-form');
+            const formData = new FormData(form);
+            
+            const templateData = {
+                name: formData.get('name'),
+                description: formData.get('description'),
+                template: {
+                    title: formData.get('task_title') || formData.get('name'),
+                    description: formData.get('task_description'),
+                    priority: formData.get('priority'),
+                    estimated_hours: parseFloat(formData.get('estimated_hours')) || 0,
+                    tags: selectedTags,
+                    assigned_users: selectedUsers.map(user => user.id)
+                }
+            };
+            
+            try {
+                showMessage('Creating template...', 'info');
+                
+                const response = await fetch('/api/task-templates/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCSRFToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(templateData)
+                });
+                
+                if (response.ok) {
+                    showMessage('Template created successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = '{% url "tasks:template_list" %}';
+                    }, 1500);
+                } else {
+                    const errorData = await response.json();
+                    showMessage(`Error: ${JSON.stringify(errorData)}`, 'error');
+                }
+            } catch (error) {
+                showMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+        
+        function showMessage(message, type) {
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    messagesDiv.innerHTML = '';
+                }, 3000);
+            }
+        }
+        
+        function getCSRFToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        }
+        
+        function logout() {
+            fetch('/api/auth/logout/', {
+                method: 'POST',
+                credentials: 'include'
+            }).then(() => {
+                window.location.href = '/auth/login/';
+            });
+        }
+    </script>
+                window.location.href = '/accounts/login/';
+            });
+        }
+        
+        // Initialize preview
+        updatePreview();
+    </script>
+</body>
+</html>

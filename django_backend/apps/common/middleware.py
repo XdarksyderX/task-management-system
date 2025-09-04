@@ -43,8 +43,8 @@ class LoginRequiredMiddleware(MiddlewareMixin):
 	
 	# Paths that should be accessible without authentication
 	EXEMPT_PATHS = [
-		'/accounts/login/',
-		'/accounts/register/',
+		'/auth/login/',
+		'/auth/register/',
 		'/api/',
 		'/admin/',
 	]
@@ -68,7 +68,7 @@ class LoginRequiredMiddleware(MiddlewareMixin):
 		
 		if requires_auth:
 			# Build login URL with next parameter
-			login_url = '/accounts/login/'
+			login_url = '/auth/login/'
 			if request.path != '/':
 				query_params = urlencode({'next': request.get_full_path()})
 				login_url = f"{login_url}?{query_params}"

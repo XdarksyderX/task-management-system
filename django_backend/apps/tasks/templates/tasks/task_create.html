@@ -109,6 +109,72 @@
             margin-right: 0.5rem;
         }
         
+        .assigned-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            min-height: 50px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .user-item {
+            background: #28a745;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .user-remove {
+            cursor: pointer;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .user-remove:hover {
+            background: rgba(255,255,255,0.5);
+        }
+        
+        .suggestions-dropdown {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            position: relative;
+        }
+        
+        .suggestion-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
         .btn {
             display: inline-block;
             padding: 0.75rem 1.5rem;
@@ -188,6 +254,17 @@
                 {% csrf_token %}
                 
                 <div class="form-group">
+                    <label for="template_selector">Use Template (Optional)</label>
+                    <select id="template_selector" name="template_selector" onchange="handleTemplateSelection(this.value)">
+                        <option value="">-- Select a template to pre-fill fields --</option>
+                        <option value="load_templates">Loading templates...</option>
+                    </select>
+                    <small style="color: #666; margin-top: 0.5rem; display: block;">
+                        Choose a template to automatically fill the form fields below
+                    </small>
+                </div>
+                
+                <div class="form-group">
                     <label for="title">Title *</label>
                     <input type="text" id="title" name="title" required maxlength="200">
                 </div>
@@ -235,6 +312,16 @@
                     </div>
                 {% endif %}
                 
+                <div class="form-group">
+                    <label>Assign Users</label>
+                    <div class="assigned-users" id="assigned-users-container">
+                        <!-- Users will be added here dynamically -->
+                    </div>
+                    <input type="text" id="user-search" placeholder="Search users to assign..." 
+                           onkeyup="searchUsers(this.value)">
+                    <div id="user-suggestions" class="suggestions-dropdown" style="display: none;"></div>
+                </div>
+                
                 <div style="margin-top: 2rem;">
                     <button type="submit" class="btn">Create Task</button>
                     <a href="/tasks/" class="btn btn-secondary">Cancel</a>
@@ -242,5 +329,348 @@
             </form>
         </div>
     </div>
+
+    <script>
+        let allTemplates = [];
+        let selectedUsers = [];
+
+        // User handling functions
+        async function searchUsers(query) {
+            if (query.length < 2) {
+                document.getElementById('user-suggestions').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/?search=${encodeURIComponent(query)}`, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const users = await response.json();
+                    showUserSuggestions(users.results || users);
+                }
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        }
+
+        function showUserSuggestions(users) {
+            const suggestions = document.getElementById('user-suggestions');
+            suggestions.innerHTML = '';
+            
+            users.forEach(user => {
+                if (!selectedUsers.find(u => u.id === user.id)) {
+                    const suggestion = document.createElement('div');
+                    suggestion.className = 'suggestion-item';
+                    suggestion.textContent = user.first_name ? `${user.first_name} ${user.last_name} (${user.username})` : user.username;
+                    suggestion.onclick = () => addUser(user);
+                    suggestions.appendChild(suggestion);
+                }
+            });
+            
+            suggestions.style.display = users.length > 0 ? 'block' : 'none';
+        }
+
+        function addUser(user) {
+            const userElement = document.createElement('div');
+            userElement.className = 'user-item';
+            userElement.innerHTML = `
+                ${user.first_name ? `${user.first_name} ${user.last_name}` : user.username}
+                <button type="button" class="user-remove" onclick="removeUser(this, ${user.id})">×</button>
+            `;
+            
+            document.getElementById('assigned-users-container').appendChild(userElement);
+            selectedUsers.push(user);
+            
+            document.getElementById('user-search').value = '';
+            document.getElementById('user-suggestions').style.display = 'none';
+        }
+
+        function removeUser(button, userId) {
+            button.parentElement.remove();
+            selectedUsers = selectedUsers.filter(user => user.id !== userId);
+        }
+        
+        // Update form submission to include assigned users
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Add hidden inputs for assigned users
+                selectedUsers.forEach(user => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'assigned_to';
+                    input.value = user.id;
+                    form.appendChild(input);
+                });
+            });
+        }
+
+        // Cargar plantillas al inicializar la página
+        async function loadTemplates() {
+            try {
+                const response = await fetch('/api/task-templates/', {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    allTemplates = await response.json();
+                    populateTemplateSelector();
+                } else {
+                    console.warn('Could not load templates');
+                    updateTemplateSelectorError();
+                }
+            } catch (error) {
+                console.warn('Error loading templates:', error);
+                updateTemplateSelectorError();
+            }
+        }
+
+        // Poblar el selector con las plantillas disponibles
+        function populateTemplateSelector() {
+            const selector = document.getElementById('template_selector');
+            
+            // Limpiar opciones existentes
+            selector.innerHTML = '<option value="">-- Select a template to pre-fill fields --</option>';
+            
+            if (allTemplates.length === 0) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'No templates available';
+                option.disabled = true;
+                selector.appendChild(option);
+                return;
+            }
+
+            // Agregar plantillas
+            allTemplates.forEach(template => {
+                const option = document.createElement('option');
+                option.value = template.id;
+                option.textContent = template.name;
+                selector.appendChild(option);
+            });
+        }
+
+        // Actualizar selector en caso de error
+        function updateTemplateSelectorError() {
+            const selector = document.getElementById('template_selector');
+            selector.innerHTML = '<option value="">-- Select a template to pre-fill fields --</option>';
+            
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Error loading templates';
+            option.disabled = true;
+            selector.appendChild(option);
+        }
+
+        // Manejar selección de plantilla desde el dropdown
+        function handleTemplateSelection(templateId) {
+            if (!templateId) {
+                clearTemplateIndicator();
+                return;
+            }
+            
+            loadTemplate(templateId);
+        }
+
+        // Get URL parameters
+        function getUrlParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Load template data when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            // Cargar plantillas primero
+            await loadTemplates();
+            
+            // Verificar si hay un template en la URL
+            const templateId = getUrlParameter('template');
+            if (templateId) {
+                // Establecer el valor en el selector
+                const selector = document.getElementById('template_selector');
+                selector.value = templateId;
+                
+                // Cargar la plantilla
+                await loadTemplate(templateId);
+            }
+        });
+
+        // Load template data from API
+        async function loadTemplate(templateId) {
+            try {
+                console.log('Loading template:', templateId);
+                
+                // Show loading message
+                showMessage('Loading template...', 'info');
+                
+                const response = await fetch(`/api/task-templates/${templateId}/`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (response.ok) {
+                    const templateData = await response.json();
+                    console.log('Template loaded:', templateData);
+                    
+                    // Fill form fields with template data
+                    fillFormFromTemplate(templateData);
+                    
+                    // Show success message with template name
+                    showMessage(`✨ Template "${templateData.name}" loaded successfully! Fields have been pre-filled.`, 'success');
+                    
+                    // Add template indicator to page header
+                    addTemplateIndicator(templateData);
+                } else {
+                    console.error('Error loading template:', response.status);
+                    showMessage('❌ Error loading template. Please try again.', 'error');
+                }
+            } catch (error) {
+                console.error('Error loading template:', error);
+                showMessage('❌ Error loading template. Please try again.', 'error');
+            }
+        }
+        
+        // Add template indicator to show which template is being used
+        function addTemplateIndicator(templateData) {
+            const pageHeader = document.querySelector('.page-header h1');
+            if (pageHeader) {
+                // Remove existing indicator if present
+                const existingIndicator = document.querySelector('.template-indicator');
+                if (existingIndicator) {
+                    existingIndicator.remove();
+                }
+                
+                const indicator = document.createElement('div');
+                indicator.className = 'template-indicator';
+                indicator.style.cssText = `
+                    background: #e3f2fd;
+                    border: 1px solid #90caf9;
+                    border-radius: 8px;
+                    padding: 1rem;
+                    margin-top: 1rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                `;
+                indicator.innerHTML = `
+                    <span style="font-size: 1.2rem;">📋</span>
+                    <div>
+                        <strong>Using Template:</strong> ${templateData.name}
+                        <br>
+                        <small style="color: #666;">${templateData.description || 'No description'}</small>
+                    </div>
+                `;
+                pageHeader.parentNode.appendChild(indicator);
+            }
+        }
+
+        // Clear template indicator
+        function clearTemplateIndicator() {
+            const existingIndicator = document.querySelector('.template-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+            
+            // Also clear any messages
+            const existingMessages = document.querySelectorAll('.dynamic-message');
+            existingMessages.forEach(msg => msg.remove());
+        }
+
+        // Fill form fields with template data
+        function fillFormFromTemplate(templateData) {
+            const template = templateData.template;
+            
+            // Fill basic fields
+            if (template.title) {
+                document.getElementById('title').value = template.title;
+            }
+            
+            if (template.description) {
+                document.getElementById('description').value = template.description;
+            }
+            
+            if (template.priority) {
+                const prioritySelect = document.getElementById('priority');
+                if (prioritySelect) {
+                    prioritySelect.value = template.priority;
+                }
+            }
+            
+            if (template.estimated_hours) {
+                const estimatedHoursInput = document.getElementById('estimated_hours');
+                if (estimatedHoursInput) {
+                    estimatedHoursInput.value = template.estimated_hours;
+                }
+            }
+            
+            // Handle tags if they exist in template
+            if (template.tags && Array.isArray(template.tags)) {
+                template.tags.forEach(tagId => {
+                    const tagCheckbox = document.getElementById(`tag_${tagId}`);
+                    if (tagCheckbox) {
+                        tagCheckbox.checked = true;
+                    }
+                });
+            }
+            
+            // Handle assigned users if they exist in template
+            if (template.assigned_users && Array.isArray(template.assigned_users)) {
+                template.assigned_users.forEach(async userId => {
+                    try {
+                        const response = await fetch(`/api/users/${userId}/`, {
+                            credentials: 'include'
+                        });
+                        if (response.ok) {
+                            const user = await response.json();
+                            if (!selectedUsers.find(u => u.id === user.id)) {
+                                addUser(user);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('Error loading user from template:', error);
+                    }
+                });
+            }
+        }
+
+        // Show message to user
+        function showMessage(message, type) {
+            // Remove any existing messages first
+            const existingMessages = document.querySelectorAll('.dynamic-message');
+            existingMessages.forEach(msg => msg.remove());
+            
+            // Create message element
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `dynamic-message message ${type}`;
+            messageDiv.style.cssText = `
+                padding: 1rem;
+                margin: 1rem 0;
+                border-radius: 8px;
+                ${type === 'success' ? 'background: #d4edda; color: #155724; border: 1px solid #c3e6cb;' : ''}
+                ${type === 'error' ? 'background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;' : ''}
+                ${type === 'info' ? 'background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;' : ''}
+            `;
+            messageDiv.textContent = message;
+            
+            // Insert message at the top of the form
+            const form = document.querySelector('.form-card');
+            const firstChild = form.firstElementChild;
+            form.insertBefore(messageDiv, firstChild.nextSibling);
+            
+            // Remove message after 5 seconds for success messages, 3 seconds for info
+            if (type === 'success') {
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 5000);
+            } else if (type === 'info') {
+                setTimeout(() => {
+                    messageDiv.remove();
+                }, 3000);
+            }
+        }
+    </script>
 </body>
 </html>

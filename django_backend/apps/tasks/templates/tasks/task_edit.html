@@ -53,240 +53,245 @@
         .breadcrumb a {
             color: #667eea;
             text-decoration: none;
+            margin-right: 0.5rem;
         }
         
-        .breadcrumb a:hover {
-            text-decoration: underline;
+        .breadcrumb a:hover { text-decoration: underline; }
+        
+        .page-header {
+            text-align: center;
+            margin-bottom: 2rem;
         }
         
-        .edit-form {
+        .page-header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .form-card {
             background: white;
             padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        
-        .form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
             margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #f0f0f0;
         }
-        
-        .form-header h1 {
-            color: #333;
-            font-size: 1.8rem;
-        }
-        
+
         .form-group {
             margin-bottom: 1.5rem;
         }
-        
+
         .form-group label {
             display: block;
             margin-bottom: 0.5rem;
-            font-weight: bold;
+            font-weight: 600;
             color: #333;
         }
-        
+
         .form-group input,
-        .form-group select,
-        .form-group textarea {
+        .form-group textarea,
+        .form-group select {
             width: 100%;
             padding: 0.75rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
             font-size: 1rem;
-            transition: border-color 0.3s;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
-        
+
         .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            border-color: #667eea;
+        .form-group textarea:focus,
+        .form-group select:focus {
             outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
-        
+
         .form-group textarea {
-            min-height: 120px;
             resize: vertical;
+            min-height: 100px;
         }
-        
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
-        
-        .tags-input {
+
+        .btn {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-align: center;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            margin-right: 1rem;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            margin-right: 1rem;
+        }
+
+        .btn-danger:hover {
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+        }
+
+        .tags-section {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
-            padding: 0.5rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            min-height: 50px;
         }
-        
-        .tag-item {
-            background: #667eea;
-            color: white;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
+
+        .tag-checkbox {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .tag-remove {
-            background: none;
-            border: none;
-            color: white;
-            cursor: pointer;
-            padding: 0;
-            font-size: 1.2rem;
-            line-height: 1;
-        }
-        
-        .tag-input {
-            border: none;
-            outline: none;
-            flex: 1;
-            min-width: 120px;
+            background: #f8f9fa;
             padding: 0.5rem;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
         }
-        
+
+        .tag-checkbox input {
+            margin-right: 0.5rem;
+            width: auto;
+        }
+
         .assigned-users {
             display: flex;
             flex-wrap: wrap;
             gap: 0.5rem;
+            padding: 0.5rem;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            min-height: 50px;
+            margin-bottom: 0.5rem;
         }
         
         .user-item {
             background: #28a745;
             color: white;
             padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
+            border-radius: 15px;
+            font-size: 0.875rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
         
-        .priority-urgent { color: #dc3545; }
-        .priority-high { color: #fd7e14; }
-        .priority-medium { color: #ffc107; }
-        .priority-low { color: #28a745; }
-        
-        .status-todo { color: #6c757d; }
-        .status-in_progress { color: #007bff; }
-        .status-review { color: #fd7e14; }
-        .status-done { color: #28a745; }
-        
-        .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: flex-end;
-            margin-top: 2rem;
-            padding-top: 1rem;
-            border-top: 2px solid #f0f0f0;
-        }
-        
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 5px;
-            font-size: 1rem;
+        .user-remove {
             cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
+            background: rgba(255,255,255,0.3);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
             align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s;
+            justify-content: center;
+            font-size: 12px;
         }
         
-        .btn-primary {
-            background: #667eea;
-            color: white;
+        .user-remove:hover {
+            background: rgba(255,255,255,0.5);
         }
         
-        .btn-primary:hover {
-            background: #5a67d8;
-        }
-        
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-        
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-        
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-        
-        .btn-danger:hover {
-            background: #c82333;
-        }
-        
-        .error-message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 1rem;
+        .suggestions-dropdown {
+            border: 1px solid #ddd;
             border-radius: 5px;
-            margin-bottom: 1rem;
-            border: 1px solid #f5c6cb;
+            background: white;
+            max-height: 200px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            position: relative;
         }
         
-        .success-message {
-            background: #d4edda;
+        .suggestion-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        
+        .suggestion-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+
+        .messages {
+            margin-bottom: 1rem;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+
+        .success {
+            background-color: #d4edda;
             color: #155724;
-            padding: 1rem;
-            border-radius: 5px;
-            margin-bottom: 1rem;
             border: 1px solid #c3e6cb;
         }
-        
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
         }
-        
+
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
         @media (max-width: 768px) {
-            .container {
-                padding: 1rem;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-            }
-            
-            .nav-links {
-                display: none;
-            }
+            .container { padding: 1rem; }
+            .form-row { grid-template-columns: 1fr; }
+            .nav-links a { margin-left: 1rem; }
         }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-content">
-            <div class="logo">Task Management System</div>
+            <div class="logo">Task Management</div>
             <nav class="nav-links">
                 <a href="/dashboard/">Dashboard</a>
                 <a href="/tasks/">Tasks</a>
-                <a href="/tasks/create/">New Task</a>
                 <a href="/tasks/templates/">Templates</a>
-                <a href="/tasks/tags/">Tags</a>
+                <a href="/tags/">Tags</a>
                 <a href="#" onclick="logout()">Logout</a>
             </nav>
         </div>
@@ -294,206 +299,134 @@
 
     <div class="container">
         <div class="breadcrumb">
-            <a href="/dashboard/">Dashboard</a> &gt; 
             <a href="/tasks/">Tasks</a> &gt; 
-            <a href="{% url 'tasks:task_detail' task.id %}">{{ task.title }}</a> &gt; 
-            Edit
+            <a href="/tasks/{{ task.id }}/">{{ task.title }}</a> &gt; 
+            <span>Edit</span>
         </div>
 
-        <div class="edit-form">
-            <div class="form-header">
-                <h1>Edit Task</h1>
-                <div>
-                    <a href="{% url 'tasks:task_detail' task.id %}" class="btn btn-secondary">Cancel</a>
-                </div>
+        <div class="page-header">
+            <h1>Edit Task</h1>
+            <p>Update task details and save changes</p>
+        </div>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
             </div>
+        {% endif %}
 
-            <div id="messages"></div>
-
-            <form id="edit-form">
+        <div class="form-card">
+            <form method="post">
+                {% csrf_token %}
+                
                 <div class="form-group">
                     <label for="title">Title *</label>
-                    <input type="text" id="title" name="title" value="{{ task.title }}" required>
+                    <input type="text" id="title" name="title" value="{{ task.title }}" required maxlength="200">
                 </div>
-
+                
                 <div class="form-group">
                     <label for="description">Description</label>
-                    <textarea id="description" name="description" placeholder="Describe the task...">{{ task.description }}</textarea>
+                    <textarea id="description" name="description" placeholder="Describe your task...">{{ task.description }}</textarea>
                 </div>
-
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label for="priority">Priority</label>
                         <select id="priority" name="priority">
-                            <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
-                            <option value="medium" {% if task.priority == 'medium' %}selected{% endif %}>Medium</option>
-                            <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
-                            <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                            {% for priority_code, priority_label in priority_choices %}
+                                <option value="{{ priority_code }}" {% if priority_code == task.priority %}selected{% endif %}>
+                                    {{ priority_label }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
-
+                    
                     <div class="form-group">
                         <label for="status">Status</label>
                         <select id="status" name="status">
-                            <option value="todo" {% if task.status == 'todo' %}selected{% endif %}>To Do</option>
-                            <option value="in_progress" {% if task.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                            <option value="review" {% if task.status == 'review' %}selected{% endif %}>Review</option>
-                            <option value="done" {% if task.status == 'done' %}selected{% endif %}>Done</option>
+                            {% for status_code, status_label in status_choices %}
+                                <option value="{{ status_code }}" {% if status_code == task.status %}selected{% endif %}>
+                                    {{ status_label }}
+                                </option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
-
+                
                 <div class="form-row">
-                    <div class="form-group">
-                        <label for="due_date">Due Date</label>
-                        <input type="datetime-local" id="due_date" name="due_date" 
-                               value="{% if task.due_date %}{{ task.due_date|date:'Y-m-d\TH:i' }}{% endif %}">
-                    </div>
-
                     <div class="form-group">
                         <label for="estimated_hours">Estimated Hours</label>
                         <input type="number" id="estimated_hours" name="estimated_hours" 
-                               value="{{ task.estimated_hours|default:'' }}" step="0.5" min="0">
+                               value="{{ task.estimated_hours|default:'' }}" min="0" step="0.5" placeholder="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="due_date">Due Date</label>
+                        <input type="datetime-local" id="due_date" name="due_date"
+                               value="{% if task.due_date %}{{ task.due_date|date:'Y-m-d\TH:i' }}{% endif %}">
                     </div>
                 </div>
-
-                <div class="form-group">
-                    <label for="tags">Tags</label>
-                    <div class="tags-input" id="tags-container">
-                        {% for tag in task.tags.all %}
-                            <div class="tag-item">
-                                {{ tag.name }}
-                                <button type="button" class="tag-remove" onclick="removeTag(this, '{{ tag.id }}')">×</button>
-                            </div>
-                        {% endfor %}
-                        <input type="text" class="tag-input" placeholder="Add tags..." onkeypress="handleTagInput(event)">
+                
+                {% if tags %}
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <div class="tags-section">
+                            {% for tag in tags %}
+                                <div class="tag-checkbox">
+                                    <input type="checkbox" id="tag_{{ tag.pk }}" name="tags" value="{{ tag.pk }}"
+                                           {% if tag in task.tags.all %}checked{% endif %}>
+                                    <label for="tag_{{ tag.pk }}">{{ tag.name }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
                     </div>
-                </div>
-
+                {% endif %}
+                
                 <div class="form-group">
                     <label>Assigned Users</label>
-                    <div class="assigned-users" id="assigned-users">
+                    <div class="assigned-users" id="assigned-users-container">
                         {% for user in task.assigned_to.all %}
                             <div class="user-item">
                                 {{ user.get_full_name|default:user.username }}
-                                <button type="button" class="tag-remove" onclick="removeAssignee(this, '{{ user.id }}')">×</button>
+                                <button type="button" class="user-remove" onclick="removeUser(this, {{ user.id }})">×</button>
                             </div>
                         {% endfor %}
                     </div>
                     <input type="text" id="user-search" placeholder="Search users to assign..." 
-                           onkeyup="searchUsers(this.value)" style="margin-top: 0.5rem;">
-                    <div id="user-suggestions" style="display: none;"></div>
+                           onkeyup="searchUsers(this.value)">
+                    <div id="user-suggestions" class="suggestions-dropdown" style="display: none;"></div>
                 </div>
-
-                <div class="form-actions">
-                    <a href="{% url 'tasks:task_detail' task.id %}" class="btn btn-secondary">Cancel</a>
+                
+                <div style="margin-top: 2rem;">
+                    <a href="/tasks/{{ task.id }}/" class="btn btn-secondary">Cancel</a>
                     <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Task</button>
-                    <button type="submit" class="btn btn-primary">Update Task</button>
+                    <button type="submit" class="btn">Update Task</button>
                 </div>
             </form>
         </div>
     </div>
 
     <script>
-        // Selected tags and assignees
-        let selectedTags = {{ task.tags.all|safe }} || [];
-        let selectedAssignees = {{ task.assigned_to.all|safe }} || [];
+        let selectedUsers = [];
         
-        // Initialize form
-        document.getElementById('edit-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            await updateTask();
+        // Initialize selected users from existing assignments
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get existing assigned users
+            const existingUsers = document.querySelectorAll('#assigned-users-container .user-item');
+            existingUsers.forEach(userElement => {
+                const button = userElement.querySelector('.user-remove');
+                if (button) {
+                    const userId = button.onclick.toString().match(/removeUser\(this, (\d+)\)/);
+                    if (userId) {
+                        selectedUsers.push({ id: parseInt(userId[1]) });
+                    }
+                }
+            });
         });
-
-        async function updateTask() {
-            const form = document.getElementById('edit-form');
-            const formData = new FormData(form);
-            
-            const taskData = {
-                title: formData.get('title'),
-                description: formData.get('description'),
-                priority: formData.get('priority'),
-                status: formData.get('status'),
-                due_date: formData.get('due_date') || null,
-                estimated_hours: formData.get('estimated_hours') || null,
-                tags: selectedTags.map(tag => tag.id || tag),
-                assigned_to: selectedAssignees.map(user => user.id || user)
-            };
-
-            try {
-                form.classList.add('loading');
-                showMessage('Updating task...', 'info');
-
-                const response = await fetch(`/api/tasks/{{ task.id }}/`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCSRFToken()
-                    },
-                    credentials: 'include',
-                    body: JSON.stringify(taskData)
-                });
-
-                if (response.ok) {
-                    showMessage('Task updated successfully!', 'success');
-                    setTimeout(() => {
-                        window.location.href = '{% url "tasks:task_detail" task.id %}';
-                    }, 1500);
-                } else {
-                    const errorData = await response.json();
-                    showMessage(`Error: ${JSON.stringify(errorData)}`, 'error');
-                }
-            } catch (error) {
-                showMessage(`Error: ${error.message}`, 'error');
-            } finally {
-                form.classList.remove('loading');
-            }
-        }
-
-        function handleTagInput(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const input = event.target;
-                const tagName = input.value.trim();
-                
-                if (tagName && !selectedTags.find(tag => tag.name === tagName)) {
-                    addTag(tagName);
-                    input.value = '';
-                }
-            }
-        }
-
-        function addTag(tagName) {
-            // Create tag element
-            const tagElement = document.createElement('div');
-            tagElement.className = 'tag-item';
-            tagElement.innerHTML = `
-                ${tagName}
-                <button type="button" class="tag-remove" onclick="removeTag(this, null, '${tagName}')">×</button>
-            `;
-            
-            // Insert before input
-            const input = document.querySelector('.tag-input');
-            input.parentNode.insertBefore(tagElement, input);
-            
-            // Add to selected tags
-            selectedTags.push({ name: tagName });
-        }
-
-        function removeTag(button, tagId, tagName) {
-            button.parentElement.remove();
-            if (tagId) {
-                selectedTags = selectedTags.filter(tag => tag.id != tagId);
-            } else {
-                selectedTags = selectedTags.filter(tag => tag.name !== tagName);
-            }
-        }
-
-        function removeAssignee(button, userId) {
-            button.parentElement.remove();
-            selectedAssignees = selectedAssignees.filter(user => user.id != userId);
-        }
-
+        
+        // User handling functions
         async function searchUsers(query) {
             if (query.length < 2) {
                 document.getElementById('user-suggestions').style.display = 'none';
@@ -519,11 +452,11 @@
             suggestions.innerHTML = '';
             
             users.forEach(user => {
-                if (!selectedAssignees.find(u => u.id === user.id)) {
+                if (!selectedUsers.find(u => u.id === user.id)) {
                     const suggestion = document.createElement('div');
-                    suggestion.style.cssText = 'padding: 0.5rem; cursor: pointer; border: 1px solid #ddd; background: white;';
+                    suggestion.className = 'suggestion-item';
                     suggestion.textContent = user.first_name ? `${user.first_name} ${user.last_name} (${user.username})` : user.username;
-                    suggestion.onclick = () => addAssignee(user);
+                    suggestion.onclick = () => addUser(user);
                     suggestions.appendChild(suggestion);
                 }
             });
@@ -531,59 +464,94 @@
             suggestions.style.display = users.length > 0 ? 'block' : 'none';
         }
 
-        function addAssignee(user) {
+        function addUser(user) {
             const userElement = document.createElement('div');
             userElement.className = 'user-item';
             userElement.innerHTML = `
                 ${user.first_name ? `${user.first_name} ${user.last_name}` : user.username}
-                <button type="button" class="tag-remove" onclick="removeAssignee(this, '${user.id}')">×</button>
+                <button type="button" class="user-remove" onclick="removeUser(this, ${user.id})">×</button>
             `;
             
-            document.getElementById('assigned-users').appendChild(userElement);
-            selectedAssignees.push(user);
+            document.getElementById('assigned-users-container').appendChild(userElement);
+            selectedUsers.push(user);
             
             document.getElementById('user-search').value = '';
             document.getElementById('user-suggestions').style.display = 'none';
         }
 
-        async function confirmDelete() {
-            if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-                try {
-                    const response = await fetch(`/api/tasks/{{ task.id }}/`, {
-                        method: 'DELETE',
-                        headers: {
-                            'X-CSRFToken': getCSRFToken()
-                        },
-                        credentials: 'include'
-                    });
-
-                    if (response.ok || response.status === 204) {
-                        showMessage('Task deleted successfully!', 'success');
-                        setTimeout(() => {
-                            window.location.href = '/tasks/';
-                        }, 1500);
-                    } else {
-                        showMessage('Error deleting task', 'error');
-                    }
-                } catch (error) {
-                    showMessage(`Error: ${error.message}`, 'error');
-                }
-            }
-        }
-
-        function showMessage(message, type) {
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML = `<div class="${type}-message">${message}</div>`;
+        function removeUser(button, userId) {
+            button.parentElement.remove();
+            selectedUsers = selectedUsers.filter(user => user.id !== userId);
             
-            if (type === 'success') {
-                setTimeout(() => {
-                    messagesDiv.innerHTML = '';
-                }, 3000);
-            }
+            // Also remove any existing hidden inputs for this user
+            const existingInputs = document.querySelectorAll(`input[name="assigned_to"][value="${userId}"]`);
+            existingInputs.forEach(input => input.remove());
+        }
+        
+        // Update form submission to include assigned users
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Remove any existing hidden inputs for assigned_to
+                const existingInputs = form.querySelectorAll('input[name="assigned_to"]');
+                existingInputs.forEach(input => input.remove());
+                
+                // Add hidden inputs for all currently selected users
+                selectedUsers.forEach(user => {
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'assigned_to';
+                    input.value = user.id;
+                    form.appendChild(input);
+                });
+                
+                // Also add existing users that are still displayed
+                const userItems = document.querySelectorAll('#assigned-users-container .user-item');
+                userItems.forEach(userItem => {
+                    const button = userItem.querySelector('.user-remove');
+                    if (button) {
+                        const userId = button.onclick.toString().match(/removeUser\(this, (\d+)\)/);
+                        if (userId) {
+                            const id = parseInt(userId[1]);
+                            // Check if this user is not already in selectedUsers
+                            if (!selectedUsers.find(u => u.id === id)) {
+                                const input = document.createElement('input');
+                                input.type = 'hidden';
+                                input.name = 'assigned_to';
+                                input.value = id;
+                                form.appendChild(input);
+                            }
+                        }
+                    }
+                });
+                
+                // Let the form submit normally (don't prevent default)
+                return true;
+            });
         }
 
-        function getCSRFToken() {
-            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+        function confirmDelete() {
+            if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+                fetch(`/api/tasks/{{ task.id }}/`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    credentials: 'include'
+                })
+                .then(response => {
+                    if (response.ok || response.status === 204) {
+                        alert('Task deleted successfully!');
+                        window.location.href = '/tasks/';
+                    } else {
+                        alert('Error deleting task');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error deleting task');
+                });
+            }
         }
 
         function logout() {
@@ -591,7 +559,7 @@
                 method: 'POST',
                 credentials: 'include'
             }).then(() => {
-                window.location.href = '/accounts/login/';
+                window.location.href = '/auth/login/';
             });
         }
     </script>

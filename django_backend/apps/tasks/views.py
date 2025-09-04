@@ -44,6 +44,7 @@ def task_create(request):
         due_date = request.POST.get('due_date')
         estimated_hours = request.POST.get('estimated_hours', 0)
         tag_ids = request.POST.getlist('tags')
+        assigned_user_ids = request.POST.getlist('assigned_to')
         
         if title:
             task = Task.objects.create(
@@ -70,8 +71,18 @@ def task_create(request):
             if tag_ids:
                 task.tags.set(tag_ids)
             
-            # Assign to creator by default
-            task.assigned_to.add(request.user)
+            # Assign users
+            if assigned_user_ids:
+                from django.contrib.auth import get_user_model
+                User = get_user_model()
+                valid_users = User.objects.filter(id__in=assigned_user_ids)
+                task.assigned_to.set(valid_users)
+                # Also add creator if not already assigned
+                if not task.assigned_to.filter(id=request.user.id).exists():
+                    task.assigned_to.add(request.user)
+            else:
+                # Assign to creator by default
+                task.assigned_to.add(request.user)
             
             messages.success(request, 'Task created successfully!')
             return redirect('tasks:task_list')
@@ -267,6 +278,58 @@ def task_edit(request, pk):
     # Check permissions - user should be creator or admin
     if not (task.created_by == request.user or request.user.is_staff):
         messages.error(request, 'You do not have permission to edit this task.')
+        return redirect('tasks:task_detail', pk=task.id)
+    
+    if request.method == 'POST':
+        # Update task fields
+        task.title = request.POST.get('title', task.title)
+        task.description = request.POST.get('description', task.description)
+        task.priority = request.POST.get('priority', task.priority)
+        task.status = request.POST.get('status', task.status)
+        
+        # Handle estimated hours
+        estimated_hours = request.POST.get('estimated_hours')
+        if estimated_hours:
+            try:
+                task.estimated_hours = float(estimated_hours)
+            except ValueError:
+                pass
+        
+        # Handle due date
+        due_date = request.POST.get('due_date')
+        if due_date:
+            from django.utils import timezone
+            from datetime import datetime
+            try:
+                naive_datetime = datetime.strptime(due_date, '%Y-%m-%dT%H:%M')
+                task.due_date = timezone.make_aware(naive_datetime)
+            except ValueError:
+                pass
+        else:
+            task.due_date = None
+        
+        # Save task
+        task.save()
+        
+        # Update tags
+        tag_ids = request.POST.getlist('tags')
+        if tag_ids:
+            task.tags.set(tag_ids)
+        else:
+            task.tags.clear()
+        
+        # Update assigned users
+        assigned_user_ids = request.POST.getlist('assigned_to')
+        if assigned_user_ids:
+            from django.contrib.auth import get_user_model
+            User = get_user_model()
+            valid_users = User.objects.filter(id__in=assigned_user_ids)
+            task.assigned_to.set(valid_users)
+        else:
+            # If no users assigned, keep creator assigned
+            task.assigned_to.set([request.user])
+        
+        messages.success(request, 'Task updated successfully!')
         return redirect('tasks:task_detail', pk=task.id)
     
     tags = Tag.objects.all().order_by('name')
