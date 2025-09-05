@@ -37,6 +37,7 @@ services:
     command: ["/app/scripts/entrypoint.sh", "web"]
     ports:
       - "8000:8000"
+      - "8001:8001"  # WebSocket port for Daphne
     depends_on:
       db:
         condition: service_healthy
@@ -49,6 +50,24 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  websocket:
+    build:
+      context: ./django_backend
+      dockerfile: Dockerfile
+    container_name: tms_websocket
+    restart: unless-stopped
+    env_file: .env
+    command: ["/app/scripts/entrypoint.sh", "websocket"]
+    ports:
+      - "8002:8002"  # Dedicated WebSocket server
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./django_backend:/app
 
   worker:
     build:

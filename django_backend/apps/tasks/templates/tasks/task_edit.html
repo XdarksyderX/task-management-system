@@ -369,6 +369,14 @@
                     </div>
                 </div>
                 
+                <div class="form-group">
+                    <label for="assigned_team">Assigned Team</label>
+                    <select id="assigned_team" name="assigned_team">
+                        <option value="">-- No team assigned --</option>
+                        <!-- Teams will be loaded here dynamically -->
+                    </select>
+                </div>
+                
                 {% if tags %}
                     <div class="form-group">
                         <label>Tags</label>
@@ -383,14 +391,6 @@
                         </div>
                     </div>
                 {% endif %}
-                
-                <div class="form-group">
-                    <label for="assigned_team">Assigned Team</label>
-                    <select id="assigned_team" name="assigned_team">
-                        <option value="">-- No Team --</option>
-                        <!-- Teams will be loaded here dynamically -->
-                    </select>
-                </div>
                 
                 <div class="form-group">
                     <label>Assigned Users</label>
@@ -417,15 +417,13 @@
     </div>
 
     <script>
-        // Set current team ID for JavaScript
-        const currentTeamId = {% if task.assigned_team %}{{ task.assigned_team.id }}{% else %}null{% endif %};
-    </script>
-    
-    <script>
         let selectedUsers = [];
         
         // Initialize selected users from existing assignments
         document.addEventListener('DOMContentLoaded', function() {
+            // Load teams dynamically
+            loadTeams();
+            
             // Get existing assigned users
             const existingUsers = document.querySelectorAll('#assigned-users-container .user-item');
             existingUsers.forEach(userElement => {
@@ -438,6 +436,33 @@
                 }
             });
         });
+
+        // Load teams function
+        async function loadTeams() {
+            try {
+                const response = await fetch('/api/teams/', {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const teams = await response.json();
+                    const teamSelect = document.getElementById('assigned_team');
+                    const currentTeamId = {% if task.assigned_team %}{{ task.assigned_team.pk }}{% else %}null{% endif %};
+                    
+                    teams.forEach(team => {
+                        const option = document.createElement('option');
+                        option.value = team.id;
+                        option.textContent = team.name;
+                        if (team.id === currentTeamId) {
+                            option.selected = true;
+                        }
+                        teamSelect.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading teams:', error);
+            }
+        }
         
         // User handling functions
         async function searchUsers(query) {
@@ -566,55 +591,6 @@
                 });
             }
         }
-
-        // Load teams when page loads
-        async function loadTeams() {
-            try {
-                const response = await fetch('/api/teams/', {
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    const teams = await response.json();
-                    const teamSelect = document.getElementById('assigned_team');
-                    
-                    teams.forEach(team => {
-                        const option = document.createElement('option');
-                        option.value = team.id;
-                        option.textContent = team.name;
-                        
-                        // Set as selected if this team is currently assigned
-                        if (currentTeamId && team.id === currentTeamId) {
-                            option.selected = true;
-                        }
-                        
-                        teamSelect.appendChild(option);
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading teams:', error);
-            }
-        }
-
-        // Initialize teams and users when page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTeams();
-            
-            // Get existing assigned users (code already exists below)
-            const existingUsers = document.querySelectorAll('#assigned-users-container .user-item');
-            existingUsers.forEach(userElement => {
-                const button = userElement.querySelector('.user-remove');
-                if (button) {
-                    // Extract user info and add to selectedUsers array
-                    const userId = button.getAttribute('onclick').match(/\d+/)[0];
-                    const userName = userElement.textContent.replace('×', '').trim();
-                    selectedUsers.push({
-                        id: parseInt(userId),
-                        name: userName
-                    });
-                }
-            });
-        });
 
         function logout() {
             fetch('/api/auth/logout/', {

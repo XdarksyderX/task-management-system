@@ -8,7 +8,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenBlacklistVi
 from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import timedelta
 from apps.users.models import Team
-from .permissions import IsSelfOrAdmin, IsTeamAdmin
+from .permissions import IsSelfOrAdmin
 from .serializers import (
     UserSerializer, UserUpdateSerializer, RegisterSerializer,
     TeamSerializer, TeamCreateSerializer, MemberActionSerializer, TeamMembersSerializer
@@ -133,170 +133,174 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class TeamViewSet(viewsets.ModelViewSet):
-    """ViewSet for Team model with member management"""
-    queryset = Team.objects.all()
-    serializer_class = TeamSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        """Return teams where user is a member"""
-        return Team.objects.filter(members=self.request.user)
+        user = self.request.user
+        if user.is_staff:
+            return Team.objects.all().order_by("-created_at")
+        # Users can see teams they created or are members of
+        return Team.objects.filter(
+            models.Q(created_by=user) | models.Q(members=user)
+        ).distinct().order_by("-created_at")
     
-    def get_permissions(self):
-        """Customize permissions based on action"""
-        if self.action in ['update', 'partial_update', 'destroy', 'add_member', 'remove_member', 'add_members']:
-            return [permissions.IsAuthenticated(), IsTeamAdmin()]
-        return [permissions.IsAuthenticated()]
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return TeamCreateSerializer
+        return TeamSerializer
     
     def perform_create(self, serializer):
-        """Create team with current user as admin and add them as member"""
         team = serializer.save(created_by=self.request.user)
-        team.members.add(self.request.user)
-        return team
+        # Automatically add creator as member
+        team.add_member(self.request.user)
     
-    @action(detail=True, methods=['post'])
+    def destroy(self, request, *args, **kwargs):
+        team = self.get_object()
+        if not team.can_manage(request.user):
+            return Response(
+                {"error": "Only team admin can delete the team"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().destroy(request, *args, **kwargs)
+    
+    def update(self, request, *args, **kwargs):
+        team = self.get_object()
+        if not team.can_manage(request.user):
+            return Response(
+                {"error": "Only team admin can update the team"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().update(request, *args, **kwargs)
+    
+    @action(detail=True, methods=["post"])
     def add_member(self, request, pk=None):
         """Add a member to the team"""
         team = self.get_object()
-        user_id = request.data.get('user_id')
         
-        if not user_id:
+        if not team.can_manage(request.user):
             return Response(
-                {'error': 'user_id is required'}, 
+                {"error": "Only team admin can add members"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        serializer = MemberActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user_id = serializer.validated_data['user_id']
+        user = User.objects.get(id=user_id)
+        
+        if team.is_member(user):
+            return Response(
+                {"error": "User is already a member of this team"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'User not found'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        if user in team.members.all():
-            return Response(
-                {'error': 'User is already a member'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        team.members.add(user)
-        return Response({'message': 'Member added successfully'})
+        team.add_member(user)
+        return Response(
+            {"message": f"User {user.username} added to team {team.name}"}, 
+            status=status.HTTP_200_OK
+        )
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def remove_member(self, request, pk=None):
         """Remove a member from the team"""
         team = self.get_object()
-        user_id = request.data.get('user_id')
         
-        if not user_id:
+        if not team.can_manage(request.user):
             return Response(
-                {'error': 'user_id is required'}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Only team admin can remove members"}, 
+                status=status.HTTP_403_FORBIDDEN
             )
         
-        try:
-            user = User.objects.get(id=user_id)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'User not found'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        serializer = MemberActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
+        user_id = serializer.validated_data['user_id']
+        user = User.objects.get(id=user_id)
+        
+        # Prevent admin from removing themselves
         if user == team.created_by:
             return Response(
-                {'error': 'Cannot remove team admin'}, 
+                {"error": "Team admin cannot be removed from the team"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if user not in team.members.all():
+        if not team.is_member(user):
             return Response(
-                {'error': 'User is not a member'}, 
+                {"error": "User is not a member of this team"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        team.members.remove(user)
-        return Response({'message': 'Member removed successfully'})
+        team.remove_member(user)
+        return Response(
+            {"message": f"User {user.username} removed from team {team.name}"}, 
+            status=status.HTTP_200_OK
+        )
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def leave(self, request, pk=None):
         """Leave the team (for non-admin members)"""
         team = self.get_object()
         user = request.user
         
-        if user == team.created_by:
+        # Admin cannot leave their own team
+        if team.is_admin(user):
             return Response(
-                {'error': 'Team admin cannot leave the team'}, 
+                {"error": "Team admin cannot leave the team. Transfer ownership or delete the team instead."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if user not in team.members.all():
+        if not team.is_member(user):
             return Response(
-                {'error': 'You are not a member of this team'}, 
+                {"error": "You are not a member of this team"}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        team.members.remove(user)
-        return Response({'message': 'Left team successfully'})
+        team.remove_member(user)
+        return Response(
+            {"message": f"You have left team {team.name}"}, 
+            status=status.HTTP_200_OK
+        )
     
-    @action(detail=True, methods=['post'])
+    @action(detail=True, methods=["post"])
     def add_members(self, request, pk=None):
         """Add multiple members to the team"""
         team = self.get_object()
         
-        # Handle both JSON and form data
-        if isinstance(request.data, dict) and 'user_ids' in request.data:
-            user_ids = request.data.get('user_ids', [])
-            if not isinstance(user_ids, list):
-                user_ids = [user_ids]
-        else:
-            # Handle form data
-            user_ids = request.data.getlist('user_ids') if hasattr(request.data, 'getlist') else []
-        
-        if not user_ids:
+        if not team.can_manage(request.user):
             return Response(
-                {'error': 'user_ids is required'}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"error": "Only team admin can add members"}, 
+                status=status.HTTP_403_FORBIDDEN
             )
         
+        serializer = TeamMembersSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user_ids = serializer.validated_data['user_ids']
+        users = User.objects.filter(id__in=user_ids)
+        
         added_users = []
-        errors = []
+        already_members = []
         
-        for user_id in user_ids:
-            try:
-                user = User.objects.get(id=int(user_id))
-                
-                if user not in team.members.all():
-                    team.members.add(user)
-                    added_users.append(user.username)
-                else:
-                    errors.append(f'User {user.username} is already a member')
-            except (User.DoesNotExist, ValueError):
-                errors.append(f'User with id {user_id} not found')
+        for user in users:
+            if team.is_member(user):
+                already_members.append(user.username)
+            else:
+                team.add_member(user)
+                added_users.append(user.username)
         
-        return Response({
-            'message': f'Added {len(added_users)} members',
-            'added_users': added_users,
-            'errors': errors
-        })
+        response_data = {}
+        if added_users:
+            response_data['added'] = added_users
+        if already_members:
+            response_data['already_members'] = already_members
+            
+        return Response(response_data, status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=['get'])
+    @action(detail=True, methods=["get"])
     def members(self, request, pk=None):
-        """List team members"""
+        """Get team members"""
         team = self.get_object()
         members = team.members.all()
-        members_data = [
-            {
-                'id': member.id,
-                'username': member.username,
-                'first_name': member.first_name,
-                'last_name': member.last_name,
-                'email': member.email,
-                'is_admin': member == team.created_by
-            }
-            for member in members
-        ]
-        return Response({
-            'members': members_data,
-            'count': len(members_data)
-        })
+        serializer = UserSerializer(members, many=True)
+        return Response(serializer.data)

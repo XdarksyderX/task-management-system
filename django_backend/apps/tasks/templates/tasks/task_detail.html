@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -221,6 +222,81 @@
             background: #c82333;
         }
         
+        .comment-list {
+            margin-bottom: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 1rem;
+        }
+
+        .comment-item {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            border-left: 3px solid #764ba2;
+        }
+
+        .comment-meta {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-bottom: 0.5rem;
+        }
+        
+        .comment-meta strong {
+            color: #333;
+        }
+
+        .comment-form {
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .comment-form textarea {
+            flex-grow: 1;
+            padding: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            min-height: 50px;
+        }
+        
+        .comment-form button {
+            flex-shrink: 0;
+        }
+
+        .comment-actions {
+            margin-left: auto;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn-edit, .btn-delete {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-edit:hover {
+            background: #f0f0f0;
+        }
+
+        .btn-delete {
+            color: #dc3545;
+        }
+
+        .btn-delete:hover {
+            background: #f8d7da;
+        }
+
         .progress-bar {
             background: #e9ecef;
             border-radius: 10px;
@@ -373,6 +449,18 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <!-- Comments Section -->
+                <div class="section">
+                    <h3>Comments</h3>
+                    <div id="comment-list" class="comment-list">
+                        <!-- Comments will be loaded here -->
+                    </div>
+                    <form id="comment-form" class="comment-form">
+                        <textarea id="comment-input" placeholder="Write a comment..." required></textarea>
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </form>
+                </div>
             </div>
 
             <div class="actions">
@@ -390,6 +478,13 @@
     </div>
 
     <script>
+        const taskId = {{ task.pk }};
+        const requestUser = {
+            id: {{ user.pk }},
+            username: "{{ user.username }}",
+            fullName: "{{ user.get_full_name|default:user.username }}"
+        };
+
         async function logout() {
             try {
                 await fetch('/api/auth/logout/', {
@@ -410,5 +505,6 @@
             }
         }
     </script>
+    <script src="{% static 'tasks/js/comments.js' %}"></script>
 </body>
 </html>

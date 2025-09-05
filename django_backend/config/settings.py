@@ -15,6 +15,9 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "rest_framework_simplejwt",
+    "django_filters",
+    "channels",
     "apps.common",
     "apps.tasks",
     "apps.users",
@@ -26,7 +29,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "apps.common.middleware.JWTAuthFromCookieMiddleware",
+    "apps.common.middleware.CookieJWTHTTPMiddleware",
     "apps.common.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
@@ -89,7 +92,7 @@ DEFAULT_FROM_EMAIL = "info@taskmanagementsystem.dummy"
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "apps.common.authentication.CookieJWTAuthentication",
+        "apps.common.auth.CookieJWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
@@ -137,5 +140,17 @@ CELERY_BEAT_SCHEDULE = {
     "cleanup-archived-nightly": {
         "task": "apps.tasks.celery_tasks.cleanup_archived_tasks",
         "schedule": crontab(hour=3, minute=0),
+    },
+}
+
+# Channels (WebSocket) configuration
+ASGI_APPLICATION = "config.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("redis", 6379)],
+        },
     },
 }

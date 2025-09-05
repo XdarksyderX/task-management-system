@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from apps.tasks.models import Tag, Task, Comment, TaskAssignment, TaskHistory, TaskTemplate, TaskAction
-from apps.tasks.celery_tasks import send_task_notification
+from apps.tasks.celery_tasks import send_task_notification, send_websocket_comment
 from .serializers import (
     TagSerializer, TaskSerializer, CommentSerializer,
     AssignmentRequestSerializer, TaskHistorySerializer,
@@ -45,7 +45,8 @@ class TaskViewSet(viewsets.ModelViewSet):
         return scoped_tasks(self.request)
 
     def perform_create(self, serializer):
-        task = serializer.save()
+        task = serializer.save(created_by=self.request.user)
+        TaskHistory.objects.create(task=task, user=self.request.user, action=TaskAction.CREATED)
         transaction.on_commit(lambda: send_task_notification.delay(task.id, "created"))
 
     def perform_update(self, serializer):
@@ -105,6 +106,7 @@ class TaskViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def comments(self, request, pk=None):
+        """Add a comment to a task (REST API + WebSocket broadcast)."""
         task = self.get_object()
         ser = CommentSerializer(
             data={"task": task.id, **request.data},
@@ -112,21 +114,78 @@ class TaskViewSet(viewsets.ModelViewSet):
         )
         ser.is_valid(raise_exception=True)
         obj = ser.save()
+        
+        # Create task history entry
         TaskHistory.objects.create(
             task=task, 
             user=request.user, 
             action=TaskAction.UPDATED,
             metadata={"comment_added": True, "comment_id": obj.id}
         )
+        
+        # Send traditional notification
         transaction.on_commit(lambda: send_task_notification.delay(task.id, "comment_added"))
+        
+        # Send WebSocket notification
+        transaction.on_commit(lambda: send_websocket_comment.delay(task.id, obj.id, "comment_added"))
         
         return Response(CommentSerializer(obj).data, status=status.HTTP_201_CREATED)
 
     @comments.mapping.get
     def list_comments(self, request, pk=None):
+        """List all comments for a task."""
         task = self.get_object()
         qs = task.comments.select_related("author").order_by("-created_at")
         return Response(CommentSerializer(qs, many=True).data)
+    
+    @action(detail=True, methods=["put", "patch"], url_path="comments/(?P<comment_id>[^/.]+)")
+    def edit_comment(self, request, pk=None, comment_id=None):
+        """Edit a specific comment (REST API + WebSocket broadcast)."""
+        task = self.get_object()
+        
+        try:
+            comment = Comment.objects.get(id=comment_id, task=task, author=request.user)
+        except Comment.DoesNotExist:
+            return Response(
+                {"error": "Comment not found or you don't have permission to edit it."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = CommentSerializer(comment, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        updated_comment = serializer.save()
+        
+        # Send WebSocket notification
+        transaction.on_commit(lambda: send_websocket_comment.delay(task.id, updated_comment.id, "comment_edited"))
+        
+        return Response(CommentSerializer(updated_comment).data)
+    
+    @action(detail=True, methods=["delete"], url_path="comments/(?P<comment_id>[^/.]+)")
+    def delete_comment(self, request, pk=None, comment_id=None):
+        """Delete a specific comment (REST API + WebSocket broadcast)."""
+        task = self.get_object()
+        
+        try:
+            comment = Comment.objects.get(id=comment_id, task=task)
+            # Only author or task creator can delete
+            if comment.author != request.user and task.created_by != request.user:
+                return Response(
+                    {"error": "You don't have permission to delete this comment."}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        except Comment.DoesNotExist:
+            return Response(
+                {"error": "Comment not found."}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        comment_id_for_ws = comment.id
+        comment.delete()
+        
+        # Send WebSocket notification
+        transaction.on_commit(lambda: send_websocket_comment.delay(task.id, comment_id_for_ws, "comment_deleted"))
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["get"])
     def history(self, request, pk=None):

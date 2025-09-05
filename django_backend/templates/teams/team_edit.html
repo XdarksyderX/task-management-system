@@ -267,7 +267,7 @@
             loading.style.display = 'block';
             
             try {
-                const response = await fetch(`/api/teams/${teamId}/`, {
+                const response = await fetch(`/api/users/teams/${teamId}/`, {
                     credentials: 'include'
                 });
                 
@@ -338,7 +338,7 @@
             }
             
             try {
-                const response = await fetch(`/api/teams/${teamId}/`, {
+                const response = await fetch(`/api/users/teams/${teamId}/`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',

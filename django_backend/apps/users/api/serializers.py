@@ -5,91 +5,77 @@ from apps.users.models import Team
 User = get_user_model()
 
 class UserSerializer(serializers.ModelSerializer):
-    """Serializer for User model"""
-    
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'display_name', 'date_joined']
-        read_only_fields = ['id', 'date_joined']
-
+        fields = ["id","username","email","first_name","last_name","display_name"]
 
 class UserUpdateSerializer(serializers.ModelSerializer):
-    """Serializer for updating User model"""
-    
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'display_name', 'email']
-
+        fields = ["email","first_name","last_name","display_name"]
 
 class RegisterSerializer(serializers.ModelSerializer):
-    """Serializer for user registration"""
-    password = serializers.CharField(write_only=True)
-    password_confirm = serializers.CharField(write_only=True)
-    
+    password = serializers.CharField(write_only=True, min_length=6)
     class Meta:
         model = User
-        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name']
-    
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password_confirm']:
-            raise serializers.ValidationError("Passwords don't match")
-        return attrs
-    
+        fields = ["username","email","password"]
     def create(self, validated_data):
-        validated_data.pop('password_confirm', None)
-        password = validated_data.pop('password')
-        user = User.objects.create_user(**validated_data)
-        user.set_password(password)
-        user.save()
-        return user
-
+        return User.objects.create_user(**validated_data)
 
 class TeamSerializer(serializers.ModelSerializer):
-    """Serializer for Team model"""
-    created_by = serializers.PrimaryKeyRelatedField(read_only=True)
-    member_count = serializers.ReadOnlyField()
+    created_by = UserSerializer(read_only=True)
     members = UserSerializer(many=True, read_only=True)
+    member_count = serializers.ReadOnlyField()
+    is_admin = serializers.SerializerMethodField()
+    is_member = serializers.SerializerMethodField()
     
     class Meta:
         model = Team
-        fields = ['id', 'name', 'description', 'created_by', 'member_count', 'members']
-        read_only_fields = ['id', 'created_by', 'member_count', 'members']
+        fields = [
+            "id", "name", "description", "created_by", "members", 
+            "member_count", "created_at", "is_admin", "is_member"
+        ]
+        read_only_fields = ["created_by", "created_at"]
     
-    def create(self, validated_data):
-        # The created_by will be set in the view
-        return super().create(validated_data)
-
+    def get_is_admin(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.is_admin(request.user)
+        return False
+    
+    def get_is_member(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.is_member(request.user)
+        return False
 
 class TeamCreateSerializer(serializers.ModelSerializer):
-    """Serializer for creating teams"""
-    
     class Meta:
         model = Team
-        fields = ['name', 'description']
-
+        fields = ["name", "description"]
 
 class MemberActionSerializer(serializers.Serializer):
-    """Serializer for adding/removing single members"""
     user_id = serializers.IntegerField()
     
     def validate_user_id(self, value):
         try:
-            User.objects.get(id=value)
+            user = User.objects.get(id=value)
+            return value
         except User.DoesNotExist:
-            raise serializers.ValidationError("User does not exist")
-        return value
-
+            raise serializers.ValidationError("User not found.")
 
 class TeamMembersSerializer(serializers.Serializer):
-    """Serializer for adding multiple members"""
     user_ids = serializers.ListField(
         child=serializers.IntegerField(),
         allow_empty=False
     )
     
     def validate_user_ids(self, value):
-        # Check that all users exist
+        if len(value) != len(set(value)):
+            raise serializers.ValidationError("Duplicate user IDs are not allowed.")
+        
         existing_users = User.objects.filter(id__in=value)
-        if existing_users.count() != len(value):
-            raise serializers.ValidationError("One or more users do not exist")
+        if len(existing_users) != len(value):
+            raise serializers.ValidationError("One or more users not found.")
+        
         return value

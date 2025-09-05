@@ -45,10 +45,6 @@ case "${1:-all}" in
         echo "Running only Users app tests..."
         run_tests "apps.users" "Users App Tests"
         ;;
-    "teams")
-        echo "Running only Team API tests..."
-        run_tests "apps.users.tests.test_api.TeamAPITest apps.users.tests.test_api.TeamMembershipAPITest apps.users.tests.test_api.TeamPermissionsAPITest" "Team API Tests"
-        ;;
     "coverage")
         echo "Running tests with coverage report..."
         echo "Installing coverage if not present..."
@@ -86,6 +82,5 @@ echo "  scripts/run_tests.sh models   # Run only model tests"
 echo "  scripts/run_tests.sh api      # Run only API tests"
 echo "  scripts/run_tests.sh tasks    # Run only tasks app tests"
 echo "  scripts/run_tests.sh users    # Run only users app tests"
-echo "  scripts/run_tests.sh teams    # Run only team API tests"
 echo "  scripts/run_tests.sh coverage # Run with coverage report"
 

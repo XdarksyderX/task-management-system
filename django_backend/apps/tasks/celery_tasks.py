@@ -187,3 +187,91 @@ def cleanup_archived_tasks():
 	if count:
 		old.delete()
 	return count
+
+
+@shared_task
+def send_websocket_comment(task_id, comment_id, event_type):
+	"""
+	Send WebSocket notifications for comment events.
+	event_type: comment_added | comment_edited | comment_deleted
+	"""
+	try:
+		from channels.layers import get_channel_layer
+		from asgiref.sync import async_to_sync
+		from apps.tasks.models import Task, Comment
+		
+		# Get the comment and task
+		task = Task.objects.get(pk=task_id)
+		
+		if event_type == "comment_deleted":
+			comment_data = {"id": comment_id}
+		else:
+			comment = Comment.objects.select_related('author').get(pk=comment_id)
+			comment_data = {
+				'id': comment.id,
+				'content': comment.content,
+				'author': {
+					'id': comment.author.id,
+					'username': comment.author.username,
+					'first_name': comment.author.first_name,
+					'last_name': comment.author.last_name,
+				},
+				'created_at': comment.created_at.isoformat(),
+				'updated_at': comment.updated_at.isoformat(),
+			}
+		
+		# Send to WebSocket room
+		channel_layer = get_channel_layer()
+		room_group_name = f'task_comments_{task_id}'
+		
+		async_to_sync(channel_layer.group_send)(
+			room_group_name,
+			{
+				'type': f'comment_{event_type.split("_")[1]}',  # comment_added -> comment_added
+				'comment': comment_data
+			}
+		)
+		
+		return True
+		
+	except Exception as e:
+		print(f"Error sending WebSocket comment notification: {e}")
+		return False
+
+
+@shared_task
+def send_websocket_task_update(task_id, update_data, user_id):
+	"""
+	Send WebSocket notifications for task updates.
+	"""
+	try:
+		from channels.layers import get_channel_layer
+		from asgiref.sync import async_to_sync
+		from django.contrib.auth import get_user_model
+		
+		User = get_user_model()
+		user = User.objects.get(pk=user_id)
+		
+		# Send to task room
+		channel_layer = get_channel_layer()
+		room_group_name = f'task_room_{task_id}'
+		
+		async_to_sync(channel_layer.group_send)(
+			room_group_name,
+			{
+				'type': 'task_updated',
+				'update_data': update_data,
+				'user': {
+					'id': user.id,
+					'username': user.username,
+					'first_name': user.first_name,
+					'last_name': user.last_name,
+				}
+			}
+		)
+		
+		return True
+		
+	except Exception as e:
+		print(f"Error sending WebSocket task update: {e}")
+		return False

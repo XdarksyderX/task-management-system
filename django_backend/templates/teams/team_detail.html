@@ -432,7 +432,7 @@
         async function loadTeamData() {
             try {
                 // Load team info
-                const teamResponse = await fetch(`/api/teams/${teamId}/`, {
+                const teamResponse = await fetch(`/api/users/teams/${teamId}/`, {
                     credentials: 'include'
                 });
                 
@@ -441,7 +441,7 @@
                     renderTeamInfo();
                     
                     // Load members
-                    const membersResponse = await fetch(`/api/teams/${teamId}/members/`, {
+                    const membersResponse = await fetch(`/api/users/teams/${teamId}/members/`, {
                         credentials: 'include'
                     });
                     
@@ -559,7 +559,7 @@
         
         async function searchUsers(query) {
             try {
-                const response = await fetch(`/api/users/?search=${encodeURIComponent(query)}`, {
+                const response = await fetch(`/api/users/users/?search=${encodeURIComponent(query)}`, {
                     credentials: 'include'
                 });
                 
@@ -610,7 +610,7 @@
             }
             
             try {
-                const response = await fetch(`/api/teams/${teamId}/add_member/`, {
+                const response = await fetch(`/api/users/teams/${teamId}/add_member/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -640,7 +640,7 @@
             }
             
             try {
-                const response = await fetch(`/api/teams/${teamId}/remove_member/`, {
+                const response = await fetch(`/api/users/teams/${teamId}/remove_member/`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -669,7 +669,7 @@
             }
             
             try {
-                const response = await fetch(`/api/teams/${teamId}/`, {
+                const response = await fetch(`/api/users/teams/${teamId}/`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -695,7 +695,7 @@
             }
             
             try {
-                const response = await fetch(`/api/teams/${teamId}/leave/`, {
+                const response = await fetch(`/api/users/teams/${teamId}/leave/`, {
                     method: 'POST',
                     credentials: 'include'
                 });

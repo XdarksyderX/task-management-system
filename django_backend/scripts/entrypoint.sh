@@ -20,6 +20,10 @@ case "${1:-web}" in
   web)
     python manage.py runserver 0.0.0.0:8000
     ;;
+  websocket)
+    echo "Starting WebSocket server with Daphne..."
+    daphne -b 0.0.0.0 -p 8002 config.asgi:application
+    ;;
   worker)
     celery -A config worker -l info
     ;;

@@ -10,12 +10,6 @@ def team_list(request):
 
 
 @login_required
-def team_create(request):
-    """View for displaying team creation template"""
-    return render(request, 'teams/team_create.html')
-
-
-@login_required
 def team_detail(request, team_id):
     """View for displaying team detail template"""
     context = {

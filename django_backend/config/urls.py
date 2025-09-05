@@ -13,7 +13,7 @@ urlpatterns = [
 
     path("auth/", include("apps.users.urls")),
     path("tasks/", include("apps.tasks.urls")),
-    path("teams/", include("apps.users.team_urls")),
+    path("teams/", include("apps.users.urls")),  # For team templates
     path(
         "api/",
         include([

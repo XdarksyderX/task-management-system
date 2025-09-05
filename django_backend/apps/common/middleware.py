@@ -1,31 +1,90 @@
 from django.contrib.auth.models import AnonymousUser
 from django.utils.deprecation import MiddlewareMixin
 from django.http import HttpResponseRedirect
-from django.urls import reverse
 from urllib.parse import urlencode
-from apps.common.authentication import CookieJWTAuthentication
+import urllib.parse
+
+from .auth import CookieJWTAuthentication
+from channels.db import database_sync_to_async
+from channels.middleware import BaseMiddleware
+
+class CookieJWTHTTPMiddleware(MiddlewareMixin):
+    """
+    Django HTTP middleware for JWT authentication from cookies.
+    Used for regular HTTP requests.
+    """
+    
+    def __init__(self, get_response):
+        super().__init__(get_response)
+        self.auth = CookieJWTAuthentication()
+    
+    def process_request(self, request):
+        """
+        Authenticate user from JWT token in cookies or headers.
+        """
+        try:
+            result = self.auth.authenticate(request)
+            if result:
+                user, validated_token = result
+                request.user = user
+                request.auth = validated_token
+            else:
+                request.user = AnonymousUser()
+        except Exception:
+            request.user = AnonymousUser()
 
 
-class JWTAuthFromCookieMiddleware(MiddlewareMixin):
-	def process_request(self, request):
-		if request.path.startswith('/api/'):
-			return None
-			
-		if hasattr(request, 'user') and request.user.is_authenticated:
-			return None
+class CookieJWTWebSocketMiddleware(BaseMiddleware):
+	def __init__(self, inner):
+		super().__init__(inner)
+		self.auth = CookieJWTAuthentication()
 
-		auth = CookieJWTAuthentication()
+	async def __call__(self, scope, receive, send):
 		try:
-			result = auth.authenticate(request)
-			if result is not None:
-				user, token = result
-				request.user = user
+			jwt_token = await self.get_token(scope)
+			if jwt_token:
+				user = await self.get_user_from_token(jwt_token)
 			else:
-				request.user = AnonymousUser()
+				user = AnonymousUser()
 		except Exception:
-			request.user = AnonymousUser()
-		
+			user = AnonymousUser()
+
+		scope['user'] = user
+		return await super().__call__(scope, receive, send)
+
+	async def get_token(self, scope):
+		"""
+		Extracts the JWT token from cookies, query string, or headers.
+		"""
+		if scope['type'] == 'websocket':
+			query_string = scope.get('query_string', b'').decode('utf-8')
+			query_params = urllib.parse.parse_qs(query_string)
+			token = query_params.get('token', [None])[0]
+			if token:
+				return token
+		headers = dict(scope.get('headers', []))
+		cookie_header = headers.get(b'cookie', b'').decode('utf-8')
+		if cookie_header:
+			cookies = {k.strip(): v for k, v in (c.split('=', 1) for c in cookie_header.split(';') if '=' in c)}
+			token = cookies.get('access_token')
+			if token:
+				return token
+		auth_header = headers.get(b'authorization', b'').decode('utf-8')
+		if auth_header.startswith('Bearer '):
+			return auth_header.split(' ')[1]
+
 		return None
+
+	@database_sync_to_async
+	def get_user_from_token(self, token):
+		"""
+		Authenticates the user based on the provided token.
+		"""
+		try:
+			validated_token = self.auth.get_validated_token(token)
+			return self.auth.get_user(validated_token)
+		except Exception:
+			return AnonymousUser()
 
 
 class LoginRequiredMiddleware(MiddlewareMixin):
