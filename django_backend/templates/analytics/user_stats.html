@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Statistics - Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Analytics service configuration
+        window.ANALYTICS_SERVICE_URL = 'http://localhost:5000';
+        
+        // JWT token management
+        function getJWTToken() {
+            // Read JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            let token = getCookie('access_token');
+            if (!token) {
+                console.warn('No JWT token found in cookies. User may need to re-login.');
+                return null;
+            }
+            return token;
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            overflow-x: hidden;
+        }
+        
+        /* Prevent chart overflow */
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .user-selector {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 200px;
+        }
+        
+        .form-group button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        
+        .form-group button:hover {
+            background: #5a6fd8;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .velocity-chart {
+            width: 100%;
+            height: 400px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .velocity-chart canvas {
+            max-height: 350px !important;
+            width: 100% !important;
+        }        .velocity-chart canvas {
+            max-height: 300px !important;
+            width: 100% !important;
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+            text-align: center;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .form-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .form-group input {
+                width: 100%;
+            }
+            
+            .velocity-chart {
+                height: 350px;
+                padding: 1.5rem;
+            }
+            
+            .velocity-chart canvas {
+                max-height: 250px !important;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+        /* Media Queries for Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            h1 { font-size: 1.8rem; }
+            .velocity-chart { height: 300px; padding: 15px; }
+            .velocity-chart canvas { max-height: 250px !important; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">👤 User Statistics</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/analytics/dashboard/">Analytics</a>
+                <a href="/analytics/tasks/">Tasks Distribution</a>
+                <a href="/analytics/reports/">Reports</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="user-selector">
+            <div class="form-group">
+                <label for="user-id">User ID:</label>
+                <input type="number" id="user-id" placeholder="Ex: 1" min="1">
+                <button onclick="loadUserStats()">Load Statistics</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <p>Loading user statistics...</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <p>Error loading user statistics. Please verify the ID is correct.</p>
+        </div>
+
+        <div id="no-data" class="no-data">
+            <h3>📊 User Statistics</h3>
+            <p>Enter a user ID to view their detailed statistics</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="created-tasks">-</div>
+                    <div class="stat-label">Created Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="assigned-tasks">-</div>
+                    <div class="stat-label">Assigned Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="comments">-</div>
+                    <div class="stat-label">Comments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="hours-done">-</div>
+                    <div class="stat-label">Completed Hours</div>
+                </div>
+            </div>
+
+            <!-- Velocity Chart -->
+            <div class="velocity-chart">
+                <h3 class="chart-title">User Velocity (Last 12 weeks)</h3>
+                <canvas id="velocity-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let velocityChart;
+        let currentUserId = null;
+
+        async function loadUserStats() {
+            const userIdInput = document.getElementById('user-id');
+            const userId = parseInt(userIdInput.value);
+            
+            if (!userId || userId < 1) {
+                alert('Por favor ingresa un ID de usuario válido');
+                return;
+            }
+
+            currentUserId = userId;
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('no-data').style.display = 'none';
+
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/analytics/user/${userId}/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar estadísticas del usuario');
+                }
+
+                const data = await response.json();
+                displayUserStats(data);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function displayUserStats(data) {
+            // Update stats cards
+            document.getElementById('created-tasks').textContent = data.summary.created;
+            document.getElementById('assigned-tasks').textContent = data.summary.assigned;
+            document.getElementById('comments').textContent = data.summary.comments;
+            document.getElementById('hours-done').textContent = Math.round(data.summary.hours_done);
+
+            // Create velocity chart
+            createVelocityChart(data.velocity);
+        }
+
+        function createVelocityChart(velocityData) {
+            const ctx = document.getElementById('velocity-chart').getContext('2d');
+            
+            if (velocityChart) {
+                velocityChart.destroy();
+            }
+
+            if (velocityData.length === 0) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+				ctx.fillText('No velocity data available', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            const labels = velocityData.map(item => {
+                const date = new Date(item.week);
+                return `Sem ${date.getDate()}/${date.getMonth() + 1}`;
+            }).reverse();
+            
+            const counts = velocityData.map(item => item.done).reverse();
+
+            velocityChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tareas Completadas',
+                        data: counts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#667eea',
+                            borderWidth: 1
+                        }
+                    }
+                }
+            });
+        }
+
+        // Allow Enter key to trigger search
+        document.getElementById('user-id').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadUserStats();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -337,7 +337,7 @@
         
         async function loadTeams() {
             try {
-                const response = await fetch('/api/users/teams/', {
+                const response = await fetch('/api/teams/', {
                     credentials: 'include'
                 });
                 
@@ -420,7 +420,7 @@
             };
             
             try {
-                const response = await fetch('/api/users/teams/', {
+                const response = await fetch('/api/teams/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -450,7 +450,7 @@
             }
             
             try {
-                const response = await fetch(`/api/users/teams/${teamId}/`, {
+                const response = await fetch(`/api/teams/${teamId}/`, {
                     method: 'DELETE',
                     credentials: 'include'
                 });
@@ -474,7 +474,7 @@
             }
             
             try {
-                const response = await fetch(`/api/users/teams/${teamId}/leave/`, {
+                const response = await fetch(`/api/teams/${teamId}/leave/`, {
                     method: 'POST',
                     credentials: 'include'
                 });

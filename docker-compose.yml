@@ -37,7 +37,6 @@ services:
     command: ["/app/scripts/entrypoint.sh", "web"]
     ports:
       - "8000:8000"
-      - "8001:8001"  # WebSocket port for Daphne
     depends_on:
       db:
         condition: service_healthy
@@ -46,7 +45,7 @@ services:
     volumes:
       - ./django_backend:/app
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/healthz || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8000/healthz/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -60,7 +59,7 @@ services:
     env_file: .env
     command: ["/app/scripts/entrypoint.sh", "websocket"]
     ports:
-      - "8002:8002"  # Dedicated WebSocket server
+      - "8002:8002"
     depends_on:
       db:
         condition: service_healthy
@@ -78,12 +77,12 @@ services:
     env_file: .env
     command: ["/app/scripts/entrypoint.sh", "worker"]
     depends_on:
-      web:
-        condition: service_started
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./django_backend:/app
 
   beat:
     build:
@@ -94,12 +93,46 @@ services:
     env_file: .env
     command: ["/app/scripts/entrypoint.sh", "beat"]
     depends_on:
-      web:
-        condition: service_started
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    volumes:
+      - ./django_backend:/app
+      - celery_beat_data:/app/celery_beat_data
+  analytics:
+    build:
+        context: ./flask_analytics
+        dockerfile: Dockerfile
+    env_file: .env
+    command: ["/app/entrypoint.sh","backend"]
+    ports:
+      - 5000:5000
+    environment:
+      WAIT_FOR: "redis,db"
+    volumes:
+      - reports_data:/reports
+    depends_on:
+      - web 
+      - db
+      - redis
+
+  rq-worker-analytics:
+    build:
+        context: ./flask_analytics
+        dockerfile: Dockerfile
+    env_file: .env
+    command: ["/app/entrypoint.sh","worker"]
+    environment:
+      WAIT_FOR: "redis"
+      RQ_QUEUES: "reports"
+    volumes:
+      - reports_data:/reports
+    depends_on:
+      - analytics 
+      - redis
 
 volumes:
   db_data:
+  reports_data:
+  celery_beat_data:

@@ -1,6 +1,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
+### Keys ### 
+*.pem
+
+
 ### Python ###
 
 #Celery beat schedule files
@@ -129,6 +133,8 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
+
+
 # Environments
 .env
 .venv
@@ -153,7 +159,7 @@ venv.bak/
 .dmypy.json
 dmypy.json
 
-# Pyre type checker
+# Pyre type checr
 .pyre/
 
 # pytype static type analyzer

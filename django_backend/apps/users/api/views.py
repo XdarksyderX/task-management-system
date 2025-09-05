@@ -22,7 +22,7 @@ class RegisterAPIView(generics.CreateAPIView):
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
-    """Custom login view that sets JWT tokens in secure cookies"""
+    """Custom login view that sets JWT tokens in secure cookies with RSA signing"""
     
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -70,21 +70,21 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             
             # Set secure cookies on the response
             new_response.set_cookie(
-                'access_token',
+                getattr(settings, 'AUTH_COOKIE_ACCESS', 'access_token'),
                 access_token,
                 max_age=60 * 60 * 24,  # 1 day
-                httponly=True,
-                secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
-                samesite='Strict'
+                httponly=getattr(settings, 'AUTH_COOKIE_HTTPONLY', False),
+                secure=getattr(settings, 'AUTH_COOKIE_SECURE', False),
+                samesite=getattr(settings, 'AUTH_COOKIE_SAMESITE', 'Lax')
             )
             
             new_response.set_cookie(
-                'refresh_token',
+                getattr(settings, 'AUTH_COOKIE_REFRESH', 'refresh_token'),
                 refresh_token,
                 max_age=60 * 60 * 24 * 7,  # 7 days
-                httponly=True,
-                secure=getattr(settings, 'SESSION_COOKIE_SECURE', False),
-                samesite='Strict'
+                httponly=getattr(settings, 'AUTH_COOKIE_HTTPONLY', False),
+                secure=getattr(settings, 'AUTH_COOKIE_SECURE', False),
+                samesite=getattr(settings, 'AUTH_COOKIE_SAMESITE', 'Lax')
             )
             
             return new_response
@@ -98,7 +98,7 @@ class CustomTokenBlacklistView(TokenBlacklistView):
     def post(self, request, *args, **kwargs):
         # Try to blacklist refresh token
         try:
-            refresh_token = request.COOKIES.get('refresh_token')
+            refresh_token = request.COOKIES.get(getattr(settings, 'AUTH_COOKIE_REFRESH', 'refresh_token'))
             if refresh_token:
                 token = RefreshToken(refresh_token)
                 token.blacklist()
@@ -107,9 +107,9 @@ class CustomTokenBlacklistView(TokenBlacklistView):
         
         response = Response({'message': 'Logout successful'})
         
-        # Clear cookies
-        response.delete_cookie('access_token')
-        response.delete_cookie('refresh_token')
+        # Clear cookies using settings configuration
+        response.delete_cookie(getattr(settings, 'AUTH_COOKIE_ACCESS', 'access_token'))
+        response.delete_cookie(getattr(settings, 'AUTH_COOKIE_REFRESH', 'refresh_token'))
         
         return response
 

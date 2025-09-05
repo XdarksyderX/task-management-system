@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Performance - Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Analytics service configuration
+        window.ANALYTICS_SERVICE_URL = 'http://localhost:5000';
+        
+        // JWT token management
+        function getJWTToken() {
+            // Read JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            let token = getCookie('access_token');
+            if (!token) {
+                console.warn('No JWT token found in cookies. User may need to re-login.');
+                return null;
+            }
+            return token;
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            overflow-x: hidden;
+        }
+        
+        /* Prevent chart overflow */
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .team-selector {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .form-group label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group input {
+            padding: 0.5rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            width: 200px;
+        }
+        
+        .form-group button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+        
+        .form-group button:hover {
+            background: #5a6fd8;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .metric-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 2rem;
+        }
+        
+                .chart-container {
+            width: 100%;
+            height: 450px;
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .chart-container canvas {
+            max-height: 400px !important;
+            width: 100% !important;
+        }
+        
+        .chart-container canvas {
+            max-height: 350px !important;
+            width: 100% !important;
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+            text-align: center;
+        }
+        
+        .kpi-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .kpi-item {
+            text-align: center;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .kpi-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        @media (max-width: 968px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .form-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .form-group input {
+                width: 100%;
+            }
+            
+            .chart-container {
+                height: 400px;
+                padding: 1.5rem;
+            }
+            
+            .chart-container canvas {
+                max-height: 300px !important;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            }
+        }
+        /* Media Queries for Responsive Design */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            h1 { font-size: 1.8rem; }
+            .chart-container { height: 350px; padding: 15px; }
+            .chart-container canvas { max-height: 300px !important; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">👥 Team Performance</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/analytics/dashboard/">Analytics</a>
+                <a href="/analytics/tasks/">Tasks Distribution</a>
+                <a href="/analytics/reports/">Reports</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="team-selector">
+            <div class="form-group">
+                <label for="team-id">Team ID:</label>
+                <input type="number" id="team-id" placeholder="Ex: 1" min="1">
+                <button onclick="loadTeamPerformance()">Load Metrics</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <p>Loading team metrics...</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <p>Error loading team metrics. Please verify the ID is correct and you have permissions.</p>
+        </div>
+
+        <div id="no-data" class="no-data">
+            <h3>📈 Team Performance Metrics</h3>
+            <p>Enter a team ID to view their detailed performance metrics</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Metrics Cards -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-number" id="total-tasks">-</div>
+                    <div class="metric-label">Total de Tareas</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" id="done-tasks">-</div>
+                    <div class="metric-label">Tareas Completadas</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" id="blocked-tasks">-</div>
+                    <div class="metric-label">Tareas Bloqueadas</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-number" id="completion-rate">-</div>
+                    <div class="metric-label">% Completado</div>
+                </div>
+            </div>
+
+            <!-- Charts and KPIs -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3 class="chart-title">Team Throughput (Last 12 weeks)</h3>
+                    <canvas id="throughput-chart"></canvas>
+                </div>
+                
+                <div class="kpi-container">
+                    <h3 class="chart-title">KPIs del Equipo</h3>
+                    
+                    <div class="kpi-item">
+                        <div class="kpi-value" id="lead-time">-</div>
+                        <div class="kpi-label">Lead Time Promedio (horas)</div>
+                    </div>
+                    
+                    <div class="kpi-item">
+                        <div class="kpi-value" id="weekly-avg">-</div>
+                        <div class="kpi-label">Promedio Semanal</div>
+                    </div>
+                    
+                    <div class="kpi-item">
+                        <div class="kpi-value" id="trend-indicator">-</div>
+                        <div class="kpi-label">Tendencia</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let throughputChart;
+        let currentTeamId = null;
+
+        async function loadTeamPerformance() {
+            const teamIdInput = document.getElementById('team-id');
+            const teamId = parseInt(teamIdInput.value);
+            
+            if (!teamId || teamId < 1) {
+                alert('Por favor ingresa un ID de equipo válido');
+                return;
+            }
+
+            currentTeamId = teamId;
+            
+            // Show loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+            document.getElementById('content').style.display = 'none';
+            document.getElementById('no-data').style.display = 'none';
+
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/analytics/team/${teamId}/performance`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        throw new Error('No tienes permisos para ver este equipo');
+                    }
+                    throw new Error('Error al cargar métricas del equipo');
+                }
+
+                const data = await response.json();
+                displayTeamPerformance(data);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').innerHTML = `<p>${error.message}</p>`;
+            }
+        }
+
+        function displayTeamPerformance(data) {
+            // Update metrics cards
+            const completionRate = data.metrics.total > 0 ? 
+                Math.round((data.metrics.done / data.metrics.total) * 100) : 0;
+            
+            document.getElementById('total-tasks').textContent = data.metrics.total;
+            document.getElementById('done-tasks').textContent = data.metrics.done;
+            document.getElementById('blocked-tasks').textContent = data.metrics.blocked;
+            document.getElementById('completion-rate').textContent = `${completionRate}%`;
+
+            // Update KPIs
+            document.getElementById('lead-time').textContent = Math.round(data.lead_time_hours_avg);
+            
+            // Calculate weekly average
+            const weeklyAvg = data.throughput.length > 0 ? 
+                Math.round(data.throughput.reduce((sum, item) => sum + item.done, 0) / data.throughput.length) : 0;
+            document.getElementById('weekly-avg').textContent = weeklyAvg;
+            
+            // Calculate trend
+            const trend = calculateTrend(data.throughput);
+            document.getElementById('trend-indicator').textContent = trend;
+
+            // Create throughput chart
+            createThroughputChart(data.throughput);
+        }
+
+        function calculateTrend(throughputData) {
+            if (throughputData.length < 2) return '📊';
+            
+            const recent = throughputData.slice(-4); // Last 4 weeks
+            const older = throughputData.slice(0, -4); // Previous weeks
+            
+            if (older.length === 0) return '📊';
+            
+            const recentAvg = recent.reduce((sum, item) => sum + item.done, 0) / recent.length;
+            const olderAvg = older.reduce((sum, item) => sum + item.done, 0) / older.length;
+            
+            if (recentAvg > olderAvg * 1.1) return '📈';
+            if (recentAvg < olderAvg * 0.9) return '📉';
+            return '📊';
+        }
+
+        function createThroughputChart(throughputData) {
+            const ctx = document.getElementById('throughput-chart').getContext('2d');
+            
+            if (throughputChart) {
+                throughputChart.destroy();
+            }
+
+            if (throughputData.length === 0) {
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#666';
+                ctx.textAlign = 'center';
+				ctx.fillText('No throughput data available', ctx.canvas.width / 2, ctx.canvas.height / 2);
+                return;
+            }
+
+            const labels = throughputData.map(item => {
+                const date = new Date(item.week);
+                return `Sem ${date.getDate()}/${date.getMonth() + 1}`;
+            }).reverse();
+            
+            const counts = throughputData.map(item => item.done).reverse();
+
+            throughputChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Tareas Completadas',
+                        data: counts,
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
+                        borderColor: '#667eea',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        },
+                        x: {
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.1)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#667eea',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Completadas: ${context.parsed.y}`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Allow Enter key to trigger search
+        document.getElementById('team-id').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                loadTeamPerformance();
+            }
+        });
+    </script>
+</body>
+</html>

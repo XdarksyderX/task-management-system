@@ -45,6 +45,14 @@ case "${1:-all}" in
         echo "Running only Users app tests..."
         run_tests "apps.users" "Users App Tests"
         ;;
+    "common")
+        echo "Running only Common app tests..."
+        run_tests "apps.common" "Common App Tests (JWT, RSA, Auth)"
+        ;;
+    "jwt"|"rsa")
+        echo "Running only RSA JWT tests..."
+        run_tests "apps.common.tests.test_rsa_jwt" "RSA JWT Tests"
+        ;;
     "coverage")
         echo "Running tests with coverage report..."
         echo "Installing coverage if not present..."
@@ -64,14 +72,16 @@ case "${1:-all}" in
         run_tests "apps.tasks.tests.test_api" "Tasks API Tests"
         run_tests "apps.users.tests.test_models" "Users Model Tests"
         run_tests "apps.users.tests.test_api" "Users API Tests"
+        run_tests "apps.common.tests.test_rsa_jwt" "RSA JWT Tests"
         
         echo ""
         echo "🎉 All test suites completed!"
         echo "Summary:"
         echo "- Tasks Model Tests"
-        echo "- Tasks API Tests"
+        echo "- Tasks API Tests" 
         echo "- Users Model Tests"
         echo "- Users API Tests"
+        echo "- RSA JWT Tests"
         ;;
 esac
 
@@ -82,5 +92,8 @@ echo "  scripts/run_tests.sh models   # Run only model tests"
 echo "  scripts/run_tests.sh api      # Run only API tests"
 echo "  scripts/run_tests.sh tasks    # Run only tasks app tests"
 echo "  scripts/run_tests.sh users    # Run only users app tests"
+echo "  scripts/run_tests.sh common   # Run only common app tests"
+echo "  scripts/run_tests.sh jwt      # Run only RSA JWT tests"
+echo "  scripts/run_tests.sh rsa      # Run only RSA JWT tests (alias)"
 echo "  scripts/run_tests.sh coverage # Run with coverage report"
 

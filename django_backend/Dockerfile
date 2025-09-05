@@ -24,8 +24,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
 	curl \
- && rm -rf /var/lib/apt/lists/* \
- && groupadd -r app && useradd --no-log-init -r -g app app
+	openssl \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -38,11 +38,9 @@ COPY . /app
 ENV CELERY_BEAT_DIR=/app/celery_beat_data
 
 RUN mkdir -p "$CELERY_BEAT_DIR" && \
-	chown -R app:app /app && \
-	chown -R app:app "$CELERY_BEAT_DIR" && \
+	mkdir -p /app/config/keys && \
 	chmod +x /app/scripts/entrypoint.sh && \
-	chmod +x /app/scripts/run_tests.sh
-
-USER app
+	chmod +x /app/scripts/run_tests.sh && \
+	chmod +x /app/scripts/keygen.sh
 
 EXPOSE 8000

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks Distribution - Analytics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Analytics service configuration
+        window.ANALYTICS_SERVICE_URL = 'http://localhost:5000';
+        
+        // JWT token management
+        function getJWTToken() {
+            // Read JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            let token = getCookie('access_token');
+            if (!token) {
+                console.warn('No JWT token found in cookies. User may need to re-login.');
+                return null;
+            }
+            return token;
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            overflow-x: hidden;
+        }
+        
+        /* Prevent chart overflow */
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 450px;
+            position: relative;
+        }
+        
+        .chart-container canvas {
+            max-height: 350px !important;
+            width: 100% !important;
+        }
+        
+        .chart-title {
+            font-size: 1.3rem;
+            margin-bottom: 1.5rem;
+            color: #333;
+            text-align: center;
+        }
+        
+        .tags-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .tags-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .tag-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .tag-name {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .tag-count {
+            background: #667eea;
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            .tags-grid {
+                grid-template-columns: 1fr;
+            }
+            .chart-container {
+                height: 400px;
+                padding: 1.5rem;
+            }
+            .chart-container canvas {
+                max-height: 300px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📊 Task Distribution</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/analytics/dashboard/">Analytics</a>
+                <a href="/analytics/tasks/">Tasks Distribution</a>
+                <a href="/analytics/reports/">Reports</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Task Distribution</h1>
+            <p class="page-subtitle">Detailed analysis of task distribution by status and most used tags</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <p>Loading task distribution...</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <p>Error loading distribution data. Please try again.</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3 class="chart-title">Distribution by Status</h3>
+                    <canvas id="status-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Tasks by Status (Bars)</h3>
+                    <canvas id="status-bar-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Top Tags Section -->
+            <div class="tags-section">
+                <h3 class="chart-title">Top 20 Most Used Tags</h3>
+                <div id="tags-grid" class="tags-grid">
+                    <!-- Tags will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let statusChart, statusBarChart;
+
+        async function loadDistributionData() {
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/analytics/tasks/distribution`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error loading distribution data');
+                }
+
+                const data = await response.json();
+                displayDistributionData(data);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function displayDistributionData(data) {
+            createStatusChart(data.by_status);
+            createStatusBarChart(data.by_status);
+            displayTopTags(data.top_tags);
+        }
+
+        function createStatusChart(statusData) {
+            const ctx = document.getElementById('status-chart').getContext('2d');
+            
+            if (statusChart) {
+                statusChart.destroy();
+            }
+
+            const labels = statusData.map(item => {
+                const statusMap = {
+                    'todo': 'To Do',
+                    'in_progress': 'In Progress',
+                    'done': 'Completed',
+                    'blocked': 'Blocked'
+                };
+                return statusMap[item.status] || item.status;
+            });
+            const counts = statusData.map(item => item.c);
+
+            statusChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#4BC0C0',
+                            '#FF6384'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 20
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createStatusBarChart(statusData) {
+            const ctx = document.getElementById('status-bar-chart').getContext('2d');
+            
+            if (statusBarChart) {
+                statusBarChart.destroy();
+            }
+
+            const labels = statusData.map(item => {
+                const statusMap = {
+                    'todo': 'To Do',
+                    'in_progress': 'In Progress',
+                    'done': 'Completed',
+                    'blocked': 'Blocked'
+                };
+                return statusMap[item.status] || item.status;
+            });
+            const counts = statusData.map(item => item.c);
+
+            statusBarChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Number of Tasks',
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(255, 99, 132, 0.8)'
+                        ],
+                        borderColor: [
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(255, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        function displayTopTags(tagsData) {
+            const tagsGrid = document.getElementById('tags-grid');
+            tagsGrid.innerHTML = '';
+
+            if (tagsData.length === 0) {
+                tagsGrid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">No hay etiquetas disponibles</p>';
+                return;
+            }
+
+            tagsData.forEach(tag => {
+                const tagItem = document.createElement('div');
+                tagItem.className = 'tag-item';
+                tagItem.innerHTML = `
+                    <span class="tag-name">${tag.tag}</span>
+                    <span class="tag-count">${tag.c}</span>
+                `;
+                tagsGrid.appendChild(tagItem);
+            });
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadDistributionData);
+    </script>
+</body>
+</html>

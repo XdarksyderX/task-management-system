@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard - Task Management System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // Analytics service configuration
+        window.ANALYTICS_SERVICE_URL = 'http://localhost:5000';
+        
+        // JWT token management
+        function getJWTToken() {
+            // Read JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            let token = getCookie('access_token');
+            if (!token) {
+                console.warn('No JWT token found in cookies. User may need to re-login.');
+                return null;
+            }
+            return token;
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            overflow-x: hidden;
+        }
+        
+        /* Prevent chart overflow */
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            height: 400px;
+            position: relative;
+        }
+        
+        .chart-container canvas {
+            max-height: 300px !important;
+            width: 100% !important;
+        }
+        
+        .chart-title {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        @media (max-width: 768px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+            
+            .chart-container {
+                height: 350px;
+            }
+            
+            .chart-container canvas {
+                max-height: 250px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📊 Analytics Dashboard</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/analytics/dashboard/">Analytics</a>
+                <a href="/analytics/tasks/">Tasks Distribution</a>
+                <a href="/analytics/reports/">Reports</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            <p>Loading analytics data...</p>
+        </div>
+        
+        <div id="error" class="error" style="display: none;">
+            <p>Error loading analytics data. Please try again.</p>
+        </div>
+
+        <div id="content" style="display: none;">
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="total-tasks">-</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="done-tasks">-</div>
+                    <div class="stat-label">Completed Tasks</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="in-progress-tasks">-</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="blocked-tasks">-</div>
+                    <div class="stat-label">Blocked</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="total-hours">-</div>
+                    <div class="stat-label">Completed Hours</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="charts-grid">
+                <div class="chart-container">
+                    <h3 class="chart-title">Distribution by Priority</h3>
+                    <canvas id="priority-chart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <h3 class="chart-title">Completed Tasks (Last 30 days)</h3>
+                    <canvas id="completion-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let priorityChart, completionChart;
+
+        async function loadDashboardData() {
+            try {
+                // Get analytics service URL from environment or use default
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/analytics/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error al cargar datos');
+                }
+
+                const data = await response.json();
+                displayDashboardData(data);
+                
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('content').style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function displayDashboardData(data) {
+            // Update stats cards
+            document.getElementById('total-tasks').textContent = data.summary.total_tasks;
+            document.getElementById('done-tasks').textContent = data.summary.done_tasks;
+            document.getElementById('in-progress-tasks').textContent = data.summary.in_progress_tasks;
+            document.getElementById('blocked-tasks').textContent = data.summary.blocked_tasks;
+            document.getElementById('total-hours').textContent = Math.round(data.summary.total_hours_done);
+
+            // Create priority chart
+            createPriorityChart(data.by_priority);
+            
+            // Create completion chart
+            createCompletionChart(data.last30_done);
+        }
+
+        function createPriorityChart(priorityData) {
+            const ctx = document.getElementById('priority-chart').getContext('2d');
+            
+            if (priorityChart) {
+                priorityChart.destroy();
+            }
+
+            const labels = priorityData.map(item => 
+                item.priority === 1 ? 'Low' :
+                item.priority === 2 ? 'Medium' :
+                item.priority === 3 ? 'High' : 'Critical'
+            );
+            const counts = priorityData.map(item => item.c);
+
+            priorityChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: counts,
+                        backgroundColor: [
+                            '#36A2EB',
+                            '#FFCE56',
+                            '#FF6384',
+                            '#FF9F40'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function createCompletionChart(completionData) {
+            const ctx = document.getElementById('completion-chart').getContext('2d');
+            
+            if (completionChart) {
+                completionChart.destroy();
+            }
+
+            const labels = completionData.map(item => 
+                new Date(item.day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+            );
+            const counts = completionData.map(item => item.c);
+
+            completionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Completed Tasks',
+                        data: counts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Load data when page loads
+        document.addEventListener('DOMContentLoaded', loadDashboardData);
+    </script>
+</body>
+</html>

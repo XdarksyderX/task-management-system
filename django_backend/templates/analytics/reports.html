@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Analytics</title>
+    <script>
+        // Analytics service configuration
+        window.ANALYTICS_SERVICE_URL = 'http://localhost:5000';
+        
+        // JWT token management
+        function getJWTToken() {
+            // Read JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            let token = getCookie('access_token');
+            if (!token) {
+                console.warn('No JWT token found in cookies. User may need to re-login.');
+                return null;
+            }
+            return token;
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            overflow-x: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .page-header {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .page-title {
+            font-size: 2rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .page-subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .report-generator {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .form-group select,
+        .form-group input {
+            width: 100%;
+            max-width: 300px;
+            padding: 0.75rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .jobs-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .jobs-list {
+            margin-top: 1rem;
+        }
+        
+        .job-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+        }
+        
+        .job-info {
+            flex: 1;
+        }
+        
+        .job-id {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 0.25rem;
+        }
+        
+        .job-status {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-queued { background: #fff3cd; color: #856404; }
+        .status-started { background: #d1ecf1; color: #0c5460; }
+        .status-finished { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        
+        .job-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-small {
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 5px;
+            margin: 1rem 0;
+        }
+        
+        .no-jobs {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📊 Reports</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Dashboard</a>
+                <a href="/analytics/dashboard/">Analytics</a>
+                <a href="/analytics/tasks/">Tasks Distribution</a>
+                <a href="/analytics/reports/">Reports</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1 class="page-title">Report Generation</h1>
+            <p class="page-subtitle">Generate and download custom reports from your data</p>
+        </div>
+
+        <!-- Report Generator -->
+        <div class="report-generator">
+            <h3 style="margin-bottom: 1.5rem; color: #333;">Generate New Report</h3>
+            
+            <div id="message-area"></div>
+            
+            <form id="report-form">
+                <div class="form-group">
+                    <label for="report-type">Tipo de Reporte:</label>
+                    <select id="report-type">
+                        <option value="">Selecciona un tipo</option>
+                        <option value="done_last_30d">Tareas Completadas (Últimos 30 días)</option>
+                        <option value="all_tasks">Todas las Tareas</option>
+                    </select>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Generate Report</button>
+                    <button type="button" class="btn btn-secondary" onclick="refreshJobs()">Actualizar Lista</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Jobs List -->
+        <div class="jobs-section">
+            <h3 style="margin-bottom: 1rem; color: #333;">Trabajos de Reporte</h3>
+            
+            <div id="jobs-loading" class="loading" style="display: none;">
+                <p>Cargando trabajos...</p>
+            </div>
+            
+            <div id="jobs-error" class="error" style="display: none;">
+                <p>Error al cargar los trabajos. Por favor, intenta de nuevo.</p>
+            </div>
+            
+            <div id="jobs-list" class="jobs-list">
+                <div class="no-jobs">
+                    <p>No hay trabajos de reporte en curso</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentJobs = [];
+        let refreshInterval;
+
+        async function generateReport() {
+            const reportType = document.getElementById('report-type').value;
+            
+            if (!reportType) {
+                showMessage('Por favor selecciona un tipo de reporte', 'error');
+                return;
+            }
+
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/reports/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        query: reportType
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error generating report');
+                }
+
+                const data = await response.json();
+                showMessage(`Report in queue. Job ID: ${data.job_id}`, 'success');
+                
+                // Add to current jobs and refresh
+                setTimeout(() => {
+                    refreshJobs();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error generating report', 'error');
+            }
+        }
+
+        async function checkJobStatus(jobId) {
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/reports/${jobId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error checking job status');
+                }
+
+                return await response.json();
+            } catch (error) {
+                console.error('Error checking job status:', error);
+                return null;
+            }
+        }
+
+        async function downloadReport(reportId) {
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/reports/${reportId}/download`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error downloading report');
+                }
+
+                // Create download link
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report_${reportId}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                showMessage('Reporte descargado exitosamente', 'success');
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage('Error downloading report', 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageArea = document.getElementById('message-area');
+            messageArea.innerHTML = `<div class="${type}">${text}</div>`;
+            
+            setTimeout(() => {
+                messageArea.innerHTML = '';
+            }, 5000);
+        }
+
+        function displayJobs() {
+            const jobsList = document.getElementById('jobs-list');
+            
+            if (currentJobs.length === 0) {
+                jobsList.innerHTML = '<div class="no-jobs"><p>No hay trabajos de reporte en curso</p></div>';
+                return;
+            }
+
+            let html = '';
+            currentJobs.forEach(job => {
+                const statusClass = `status-${job.status}`;
+                const canDownload = job.status === 'finished' && job.result && job.result.report_id;
+                
+                html += `
+                    <div class="job-item">
+                        <div class="job-info">
+                            <div class="job-id">Job ID: ${job.job_id}</div>
+                            <span class="job-status ${statusClass}">${job.status}</span>
+                            ${job.result ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
+                                ${job.result.count ? `${job.result.count} registros` : ''}
+                            </div>` : ''}
+                        </div>
+                        <div class="job-actions">
+                            <button class="btn btn-secondary btn-small" onclick="refreshJobStatus('${job.job_id}')">
+                                Actualizar
+                            </button>
+                            ${canDownload ? `
+                                <button class="btn btn-success btn-small" onclick="downloadReport('${job.result.report_id}')">
+                                    Download
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            jobsList.innerHTML = html;
+        }
+
+        async function refreshJobStatus(jobId) {
+            const status = await checkJobStatus(jobId);
+            if (status) {
+                const jobIndex = currentJobs.findIndex(j => j.job_id === jobId);
+                if (jobIndex !== -1) {
+                    currentJobs[jobIndex] = status;
+                } else {
+                    currentJobs.push(status);
+                }
+                displayJobs();
+            }
+        }
+
+        function refreshJobs() {
+            // This would normally fetch all jobs from an endpoint
+            // For now, we just refresh the status of existing jobs
+            currentJobs.forEach(job => {
+                refreshJobStatus(job.job_id);
+            });
+        }
+
+        // Form submission
+        document.getElementById('report-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            generateReport();
+        });
+
+        // Auto-refresh jobs every 5 seconds
+        refreshInterval = setInterval(() => {
+            if (currentJobs.length > 0) {
+                refreshJobs();
+            }
+        }, 5000);
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', function() {
+            displayJobs();
+        });
+
+        // Cleanup interval on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

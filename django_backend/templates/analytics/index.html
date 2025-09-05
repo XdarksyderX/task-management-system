@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Task Management System</title>
+    <script>
+        // Analytics service configuration
+        window.ANALYTICS_SERVICE_URL = 'http://localhost:5000';
+        
+        // JWT token management
+        function getJWTToken() {
+            // Read JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            
+            let token = getCookie('access_token');
+            if (!token) {
+                console.warn('No JWT token found in cookies. User may need to re-login.');
+                return null;
+            }
+            return token;
+        }
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #f5f5f5; 
+            overflow-x: hidden;
+        }
+        
+        /* Global chart container styles */
+        .chart-container, .velocity-chart {
+            overflow: hidden;
+        }
+        
+        canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo { font-size: 1.5rem; font-weight: bold; }
+        
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 2rem;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        
+        .nav-links a:hover { background: rgba(255,255,255,0.1); }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .hero {
+            background: white;
+            padding: 3rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 3rem;
+            text-align: center;
+        }
+        
+        .hero-title {
+            font-size: 3rem;
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .hero-subtitle {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 2rem;
+        }
+        
+        .hero-description {
+            font-size: 1rem;
+            color: #777;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+        
+        .analytics-card {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .analytics-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .card-description {
+            color: #666;
+            text-align: center;
+            line-height: 1.6;
+        }
+        
+        .card-features {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .card-features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .card-features li {
+            padding: 0.25rem 0;
+            color: #777;
+            font-size: 0.9rem;
+        }
+        
+        .card-features li:before {
+            content: "✓";
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 0.5rem;
+        }
+        
+        .quick-stats {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .stats-title {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 2rem;
+            }
+            
+            .analytics-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">📊 Analytics Hub</div>
+            <nav class="nav-links">
+                <a href="/dashboard/">Main Dashboard</a>
+                <a href="/analytics/">Analytics Home</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="hero">
+            <h1 class="hero-title">📊 Analytics Dashboard</h1>
+            <p class="hero-subtitle">Insights and metrics for your task management system</p>
+            <p class="hero-description">
+                Explore detailed data about task performance, teams, and users. 
+                Get valuable insights to improve productivity and make informed decisions.
+            </p>
+        </div>
+
+        <div class="quick-stats" id="quick-stats" style="display: none;">
+            <h3 class="stats-title">Quick Summary</h3>
+            <div class="stats-row">
+                <div class="stat-item">
+                    <div class="stat-number" id="total-tasks-quick">-</div>
+                    <div class="stat-label">Total Tasks</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="done-tasks-quick">-</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="progress-tasks-quick">-</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number" id="completion-rate-quick">-</div>
+                    <div class="stat-label">% Completed</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="analytics-grid">
+            <a href="/analytics/dashboard/" class="analytics-card">
+                <div class="card-icon">📈</div>
+                <h3 class="card-title">Main Dashboard</h3>
+                <p class="card-description">
+                    Overview with key metrics, progress charts, and completed task statistics.
+                </p>
+                <div class="card-features">
+                    <ul>
+                        <li>Real-time summary metrics</li>
+                        <li>Distribution by priority</li>
+                        <li>Last 30 days trends</li>
+                        <li>Completed work hours</li>
+                    </ul>
+                </div>
+            </a>
+
+            <a href="/analytics/tasks/" class="analytics-card">
+                <div class="card-icon">📋</div>
+                <h3 class="card-title">Task Distribution</h3>
+                <p class="card-description">
+                    Detailed analysis of how tasks are distributed by status and most used tags.
+                </p>
+                <div class="card-features">
+                    <ul>
+                        <li>Charts by task status</li>
+                        <li>Top 20 most used tags</li>
+                        <li>Interactive visualizations</li>
+                        <li>Pattern analysis</li>
+                    </ul>
+                </div>
+            </a>
+
+            <a href="/analytics/user-stats/" class="analytics-card">
+                <div class="card-icon">👤</div>
+                <h3 class="card-title">User Statistics</h3>
+                <p class="card-description">
+                    Individual productivity metrics, work velocity, and contributions per user.
+                </p>
+                <div class="card-features">
+                    <ul>
+                        <li>Created and assigned tasks</li>
+                        <li>Comments and participation</li>
+                        <li>Weekly velocity</li>
+                        <li>Completed work hours</li>
+                    </ul>
+                </div>
+            </a>
+
+            <a href="/analytics/team-performance/" class="analytics-card">
+                <div class="card-icon">👥</div>
+                <h3 class="card-title">Team Performance</h3>
+                <p class="card-description">
+                    Team performance analysis, throughput, and group collaboration metrics.
+                </p>
+                <div class="card-features">
+                    <ul>
+                        <li>Real-time team metrics</li>
+                        <li>Weekly throughput</li>
+                        <li>Average lead time</li>
+                        <li>Trends and KPIs</li>
+                    </ul>
+                </div>
+            </a>
+
+            <a href="/analytics/reports/" class="analytics-card">
+                <div class="card-icon">📄</div>
+                <h3 class="card-title">Report Generation</h3>
+                <p class="card-description">
+                    Generate and download custom reports in CSV format for external analysis.
+                </p>
+                <div class="card-features">
+                    <ul>
+                        <li>Completed tasks reports</li>
+                        <li>CSV export</li>
+                        <li>Background processing</li>
+                        <li>Job tracking</li>
+                    </ul>
+                </div>
+            </a>
+
+            <div class="analytics-card" style="cursor: default; opacity: 0.7;">
+                <div class="card-icon">🔮</div>
+                <h3 class="card-title">Predictions</h3>
+                <p class="card-description">
+                    Predictive analysis and forecasting based on historical patterns (Coming Soon).
+                </p>
+                <div class="card-features">
+                    <ul>
+                        <li>Completion time prediction</li>
+                        <li>Risk analysis</li>
+                        <li>Workload forecasting</li>
+                        <li>Machine Learning insights</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadQuickStats() {
+            try {
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/analytics/dashboard`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    displayQuickStats(data);
+                    document.getElementById('quick-stats').style.display = 'block';
+                }
+            } catch (error) {
+                console.log('Could not load quick statistics');
+            }
+        }
+
+        function displayQuickStats(data) {
+            const completionRate = data.summary.total_tasks > 0 ? 
+                Math.round((data.summary.done_tasks / data.summary.total_tasks) * 100) : 0;
+
+            document.getElementById('total-tasks-quick').textContent = data.summary.total_tasks;
+            document.getElementById('done-tasks-quick').textContent = data.summary.done_tasks;
+            document.getElementById('progress-tasks-quick').textContent = data.summary.in_progress_tasks;
+            document.getElementById('completion-rate-quick').textContent = `${completionRate}%`;
+        }
+
+        // Load quick stats on page load
+        document.addEventListener('DOMContentLoaded', loadQuickStats);
+    </script>
+</body>
+</html>

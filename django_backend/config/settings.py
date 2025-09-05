@@ -29,6 +29,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "apps.common.jwt_middleware.JWTKeyConfigurationMiddleware",  # Configure JWT keys
     "apps.common.middleware.CookieJWTHTTPMiddleware",
     "apps.common.middleware.LoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -75,7 +76,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
 ]
 
-LANGUAGE_CODE = "es-es"
+LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Europe/Madrid"
 USE_I18N = True
 USE_TZ = True
@@ -113,17 +114,35 @@ from datetime import timedelta
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/auth/login/"
 
+# JWT Configuration  
+from datetime import timedelta
+
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
-    "ROTATE_REFRESH_TOKENS": False,
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
+    
+    # Force RS256 algorithm
+    "ALGORITHM": "RS256",
+    
+    # Token validation
+    "VERIFY_SIGNATURE": True,
+    "VERIFY_EXP": True,
+    "VERIFY_NBF": True,
+    "REQUIRE_EXP": True,
+    "REQUIRE_NBF": False,
+    
+    # Token headers and claims
+    "TOKEN_USE_HEADER_PREFIX": True,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+    "UPDATE_LAST_LOGIN": True,
 }
 
 AUTH_COOKIE_ACCESS = "access_token"
 AUTH_COOKIE_REFRESH = "refresh_token"
 AUTH_COOKIE_SECURE = False
-AUTH_COOKIE_HTTPONLY = True
+AUTH_COOKIE_HTTPONLY = False
 AUTH_COOKIE_SAMESITE = "Lax"
 
 # Celery Beat Schedule
