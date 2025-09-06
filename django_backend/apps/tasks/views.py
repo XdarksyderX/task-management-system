@@ -7,31 +7,64 @@ from .models import Task, Tag, TaskTemplate, TaskStatus, TaskPriority
 
 @login_required
 def task_list(request):
-    """List all tasks for the user"""
-    tasks = Task.objects.filter(
+    """List all tasks for the user with SSR"""
+    # Base queryset
+    user_tasks = Task.objects.filter(
         assigned_to=request.user,
         is_archived=False
     ).select_related('created_by').prefetch_related('tags', 'assigned_to')
     
+    # Handle POST actions
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        task_id = request.POST.get('task_id')
+        
+        if action == 'mark_done' and task_id:
+            try:
+                task = Task.objects.get(id=task_id, assigned_to=request.user)
+                task.status = TaskStatus.DONE
+                task.save()
+                messages.success(request, f'Task "{task.title}" marked as completed!')
+            except Task.DoesNotExist:
+                messages.error(request, 'Task not found.')
+        
+        return redirect('tasks:task_list')
+    
+    # Apply filters
+    filtered_tasks = user_tasks
+    
     # Filter by status if provided
     status = request.GET.get('status')
     if status and status in [choice[0] for choice in TaskStatus.choices]:
-        tasks = tasks.filter(status=status)
+        filtered_tasks = filtered_tasks.filter(status=status)
     
     # Filter by priority if provided
     priority = request.GET.get('priority')
     if priority and priority in [choice[0] for choice in TaskPriority.choices]:
-        tasks = tasks.filter(priority=priority)
+        filtered_tasks = filtered_tasks.filter(priority=priority)
+    
+    # Get task statistics (from all user tasks, not filtered)
+    stats = {
+        'total_tasks': user_tasks.count(),
+        'todo_tasks': user_tasks.filter(status=TaskStatus.TODO).count(),
+        'in_progress_tasks': user_tasks.filter(status=TaskStatus.IN_PROGRESS).count(),
+        'blocked_tasks': user_tasks.filter(status=TaskStatus.BLOCKED).count(),
+        'done_tasks': user_tasks.filter(status=TaskStatus.DONE).count(),
+    }
+    
+    # Order tasks
+    tasks = filtered_tasks.order_by('-created_at')
     
     context = {
         'tasks': tasks,
+        'stats': stats,
         'status_choices': TaskStatus.choices,
         'priority_choices': TaskPriority.choices,
         'current_status': status,
         'current_priority': priority,
     }
     
-    return render(request, 'tasks/task_list.html', context)
+    return render(request, 'tasks/task_list_ssr.html', context)
 
 
 @login_required
@@ -143,7 +176,7 @@ def tag_list(request):
         'tags': tags,
     }
     
-    return render(request, 'tasks/tag_list.html', context)
+    return render(request, 'tags/tag_list.html', context)
 
 
 @login_required
@@ -170,7 +203,7 @@ def tag_create(request):
         else:
             messages.error(request, 'Tag name is required.')
     
-    return render(request, 'tasks/tag_create.html')
+    return render(request, 'tags/tag_create.html')
 
 
 @login_required
@@ -184,7 +217,7 @@ def template_list(request):
         'templates': templates,
     }
     
-    return render(request, 'tasks/template_list.html', context)
+    return render(request, 'templates/template_list.html', context)
 
 
 @login_required
@@ -223,7 +256,7 @@ def template_create(request):
         'priority_choices': TaskPriority.choices,
     }
     
-    return render(request, 'tasks/template_create.html', context)
+    return render(request, 'templates/template_create.html', context)
 
 
 @login_required
@@ -241,7 +274,7 @@ def template_edit(request, pk):
         'priority_choices': TaskPriority.choices,
     }
     
-    return render(request, 'tasks/template_edit.html', context)
+    return render(request, 'templates/template_edit.html', context)
 
 
 @login_required
@@ -263,7 +296,7 @@ def template_delete(request, pk):
         'template': template,
     }
     
-    return render(request, 'tasks/template_delete.html', context)
+    return render(request, 'templates/template_delete.html', context)
 
 
 @login_required

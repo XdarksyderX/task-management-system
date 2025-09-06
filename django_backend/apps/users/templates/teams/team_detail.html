@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ team.name }} - Team Details</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+        }
+        
+        .nav {
+            margin-bottom: 2rem;
+        }
+        
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .nav a:hover {
+            background-color: #e8f0fe;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 500;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-sm {
+            padding: 8px 16px;
+            font-size: 0.9rem;
+        }
+        
+        .team-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+        }
+        
+        .team-info h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .team-role {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: inline-block;
+        }
+        
+        .team-role.admin {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .team-role.member {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .team-description {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 1rem;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 2rem;
+        }
+        
+        .members-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .member-list {
+            list-style: none;
+        }
+        
+        .member-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .member-item:last-child {
+            border-bottom: none;
+        }
+        
+        .member-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .member-avatar {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .member-details h4 {
+            margin: 0;
+            color: #333;
+        }
+        
+        .member-details p {
+            margin: 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .add-member-section {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+        
+        .search-container {
+            position: relative;
+            margin-bottom: 1rem;
+        }
+        
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e1e5e9;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+        }
+        
+        .search-result-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .tasks-preview {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .messages {
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .message.warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .team-header {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .team-actions {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <div class="nav">
+            <a href="{% url 'users:team_list' %}">← Back to Teams</a>
+        </div>
+        
+        <!-- Messages -->
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <!-- Team Header -->
+        <div class="header">
+            <div class="team-header">
+                <div class="team-info">
+                    <h1>{{ team.name }}</h1>
+                    {% if is_admin %}
+                        <div class="team-role admin">👑 You are Admin</div>
+                    {% else %}
+                        <div class="team-role member">👤 You are Member</div>
+                    {% endif %}
+                    {% if team.description %}
+                        <div class="team-description">{{ team.description }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="team-actions">
+                    {% if is_admin %}
+                        <a href="{% url 'users:team_edit' team.id %}" class="btn btn-secondary">Edit Team</a>
+                        <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this team? This action cannot be undone.')">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="delete_team">
+                            <button type="submit" class="btn btn-danger">Delete Team</button>
+                        </form>
+                    {% else %}
+                        <form method="post" style="display: inline;" onsubmit="return confirm('Are you sure you want to leave this team?')">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="leave_team">
+                            <button type="submit" class="btn btn-danger">Leave Team</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Tasks Preview -->
+            <div class="tasks-preview">
+                <div class="section-title">
+                    📋 Recent Team Activity
+                </div>
+                <p>Task management features will be integrated here.</p>
+                <a href="/tasks/" class="btn">Manage Tasks</a>
+            </div>
+            
+            <!-- Members Section -->
+            <div class="members-section">
+                <div class="section-title">
+                    👥 Team Members ({{ members.count|add:1 }})
+                </div>
+                
+                <ul class="member-list">
+                    <!-- Team Admin -->
+                    <li class="member-item">
+                        <div class="member-info">
+                            <div class="member-avatar">
+                                {{ team.created_by.username|first|upper }}
+                            </div>
+                            <div class="member-details">
+                                <h4>{{ team.created_by.get_full_name|default:team.created_by.username }}</h4>
+                                <p>👑 Team Admin</p>
+                            </div>
+                        </div>
+                    </li>
+                    
+                    <!-- Team Members -->
+                    {% for member in members %}
+                        <li class="member-item">
+                            <div class="member-info">
+                                <div class="member-avatar">
+                                    {{ member.username|first|upper }}
+                                </div>
+                                <div class="member-details">
+                                    <h4>{{ member.get_full_name|default:member.username }}</h4>
+                                    <p>👤 Member</p>
+                                </div>
+                            </div>
+                            {% if is_admin %}
+                                <form method="post" style="display: inline;" onsubmit="return confirm('Remove {{ member.username }} from the team?')">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="action" value="remove_member">
+                                    <input type="hidden" name="user_id" value="{{ member.id }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                                </form>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+                
+                <!-- Add Member Section (Admin Only) -->
+                {% if is_admin %}
+                    <div class="add-member-section">
+                        <div class="section-title">
+                            ➕ Add Member
+                        </div>
+                        
+                        <div class="search-container">
+                            <input type="text" 
+                                   class="search-input" 
+                                   id="userSearch" 
+                                   placeholder="Search users by username..."
+                                   autocomplete="off">
+                            <div class="search-results" id="searchResults"></div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        {% if is_admin %}
+        let searchTimeout;
+        
+        document.getElementById('userSearch').addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length < 2) {
+                document.getElementById('searchResults').innerHTML = '';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => searchUsers(query), 300);
+        });
+        
+        async function searchUsers(query) {
+            try {
+                const response = await fetch(`/api/users/users/?search=${encodeURIComponent(query)}`, {
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const users = data.results || data;
+                    renderSearchResults(users);
+                }
+            } catch (error) {
+                console.error('Error searching users:', error);
+            }
+        }
+        
+        function renderSearchResults(users) {
+            const container = document.getElementById('searchResults');
+            
+            // Filter out users who are already members or admin
+            const memberIds = [{{ team.created_by.id }}{% for member in members %}, {{ member.id }}{% endfor %}];
+            const availableUsers = users.filter(user => !memberIds.includes(user.id));
+            
+            if (availableUsers.length === 0) {
+                container.innerHTML = '<div class="search-result-item">No users found</div>';
+                return;
+            }
+            
+            container.innerHTML = availableUsers.map(user => `
+                <div class="search-result-item" onclick="addMember(${user.id}, '${user.username}')">
+                    <strong>${user.username}</strong>
+                    ${user.first_name || user.last_name ? `<br><small>${user.first_name} ${user.last_name}</small>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function addMember(userId, username) {
+            if (confirm(`Add ${username} to the team?`)) {
+                // Create a form and submit it
+                const form = document.createElement('form');
+                form.method = 'post';
+                form.innerHTML = `
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="add_member">
+                    <input type="hidden" name="user_id" value="${userId}">
+                `;
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+        
+        // Hide search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-container')) {
+                document.getElementById('searchResults').innerHTML = '';
+            }
+        });
+        {% endif %}
+        
+        // Auto-hide messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>

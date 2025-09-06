@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit {{ team.name }} - Team Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .nav {
+            margin-bottom: 2rem;
+        }
+        
+        .nav a {
+            color: #667eea;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        
+        .nav a:hover {
+            background-color: #e8f0fe;
+        }
+        
+        .form-container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+        
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+        
+        .form-group small {
+            display: block;
+            margin-top: 5px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: 500;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .spinner {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+        }
+        
+        .spinner::before {
+            content: '';
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .messages {
+            margin-bottom: 20px;
+        }
+        
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .message.success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .message.error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .message.warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .required {
+            color: #dc3545;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .form-container {
+                padding: 20px;
+            }
+            
+            .form-actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navigation -->
+        <div class="nav">
+            <a href="{% url 'users:team_detail' team.id %}">← Back to {{ team.name }}</a>
+        </div>
+        
+        <!-- Header -->
+        <div class="header">
+            <h1>✏️ Edit Team</h1>
+            <p>Update your team information</p>
+        </div>
+        
+        <!-- Messages -->
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <div class="message {{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <!-- Form -->
+        <div class="form-container">
+            <form method="post" id="editTeamForm">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="name">Team Name <span class="required">*</span></label>
+                    <input type="text" 
+                           id="name" 
+                           name="name" 
+                           value="{{ team.name }}"
+                           required 
+                           maxlength="100"
+                           autocomplete="off">
+                    <small>Choose a clear and descriptive name for your team</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" 
+                              name="description" 
+                              maxlength="500"
+                              placeholder="Describe the purpose and goals of this team...">{{ team.description|default:"" }}</textarea>
+                    <small>Optional: Provide additional context about your team (max 500 characters)</small>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn" id="submitBtn">
+                        <span id="submitText">Update Team</span>
+                        <span id="submitSpinner" class="spinner">Updating...</span>
+                    </button>
+                    
+                    <a href="{% url 'users:team_detail' team.id %}" class="btn btn-secondary">Cancel</a>
+                    
+                    <!-- Delete Team Button -->
+                    <button type="button" 
+                            class="btn btn-danger" 
+                            onclick="showDeleteConfirmation()"
+                            style="margin-left: auto;">
+                        Delete Team
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation (Hidden initially) -->
+    <div id="deleteConfirmation" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 10px; max-width: 400px; text-align: center;">
+            <h3 style="margin-bottom: 15px; color: #dc3545;">⚠️ Delete Team</h3>
+            <p style="margin-bottom: 20px; line-height: 1.5;">
+                Are you sure you want to delete "<strong>{{ team.name }}</strong>"?
+                <br><br>
+                <strong>This action cannot be undone.</strong> All team data, including members and associated tasks, will be permanently removed.
+            </p>
+            <div>
+                <form method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="delete_team">
+                    <button type="submit" class="btn btn-danger">Yes, Delete Team</button>
+                </form>
+                <button type="button" class="btn btn-secondary" onclick="hideDeleteConfirmation()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Form validation and submission handling
+        document.getElementById('editTeamForm').addEventListener('submit', function(e) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const submitSpinner = document.getElementById('submitSpinner');
+            const nameInput = document.getElementById('name');
+            
+            // Validate name
+            if (!nameInput.value.trim()) {
+                e.preventDefault();
+                nameInput.focus();
+                return;
+            }
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitText.style.display = 'none';
+            submitSpinner.style.display = 'inline-flex';
+        });
+        
+        // Delete confirmation functions
+        function showDeleteConfirmation() {
+            document.getElementById('deleteConfirmation').style.display = 'block';
+        }
+        
+        function hideDeleteConfirmation() {
+            document.getElementById('deleteConfirmation').style.display = 'none';
+        }
+        
+        // Close delete confirmation when clicking outside
+        document.getElementById('deleteConfirmation').addEventListener('click', function(e) {
+            if (e.target === this) {
+                hideDeleteConfirmation();
+            }
+        });
+        
+        // Auto-hide messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 300);
+                }, 5000);
+            });
+        });
+        
+        // Character counter for description
+        const descriptionTextarea = document.getElementById('description');
+        const maxLength = 500;
+        
+        function updateCharCounter() {
+            const currentLength = descriptionTextarea.value.length;
+            const remaining = maxLength - currentLength;
+            
+            // Find or create counter element
+            let counter = document.getElementById('descCounter');
+            if (!counter) {
+                counter = document.createElement('small');
+                counter.id = 'descCounter';
+                counter.style.float = 'right';
+                counter.style.marginTop = '5px';
+                descriptionTextarea.parentNode.appendChild(counter);
+            }
+            
+            counter.textContent = `${currentLength}/${maxLength} characters`;
+            counter.style.color = remaining < 50 ? '#dc3545' : '#666';
+        }
+        
+        descriptionTextarea.addEventListener('input', updateCharCounter);
+        updateCharCounter(); // Initial count
+        
+        // Prevent form resubmission on page refresh
+        if (window.history.replaceState) {
+            window.history.replaceState(null, null, window.location.href);
+        }
+    </script>
+</body>
+</html>

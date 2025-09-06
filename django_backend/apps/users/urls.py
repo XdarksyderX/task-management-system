@@ -1,6 +1,5 @@
 from django.urls import path, include
-from .views import login_page, register_page
-from .team_views import team_list, team_detail, team_edit
+from .views import login_page, register_page, team_list, team_detail, team_edit
 
 app_name = 'users'
 
