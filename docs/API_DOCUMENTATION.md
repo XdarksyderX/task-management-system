@@ -1,5 +1,7 @@
 # API Documentation
 
+*Last updated: September 7, 2025*
+
 ## Django Backend API
 
 ### Authentication Endpoints
@@ -67,9 +69,7 @@
 - `GET /api/v1/analytics/team/{team_id}/performance` - Team performance metrics (total tasks, done tasks, throughput, lead time)
 
 ### Reports
-- `POST /api/v1/reports/generate` - Generate analytics report (async job)
+- `GET /api/v1/reports` - List all reports/jobs for the authenticated user
+- `POST /api/v1/reports/generate` - Generate analytics report (async job, supports preflight OPTIONS)
 - `GET /api/v1/reports/{job_id}` - Check report generation status
 - `GET /api/v1/reports/{report_id}/download` - Download generated report
-
-## Authentication
-All Flask Analytics endpoints require JWT authentication with Bearer token in Authorization header.

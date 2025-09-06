@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import uuid
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file, abort, g
 from flask_cors import CORS
@@ -9,19 +10,6 @@ from redis import Redis
 from rq import Queue
 from init_db import init_db
 from jwt_auth import jwt_required
-
-# Load environment variables from .env file
-try:
-    from dotenv import load_dotenv
-    # Look for .env in parent directory (project root)
-    env_path = Path(__file__).parent.parent / '.env'
-    if env_path.exists():
-        load_dotenv(env_path)
-        print(f"[INFO] Loaded environment from {env_path}")
-    else:
-        print(f"[WARNING] .env file not found at {env_path}")
-except ImportError:
-    print("[WARNING] python-dotenv not installed, using system environment variables")
 
 def create_app():
     app = Flask(__name__)
@@ -47,8 +35,6 @@ def create_app():
              "http://127.0.0.1:8000",  # Alternative localhost
              "http://web:8000",        # Docker container name
              "http://tms_web:8000",    # Docker compose service name
-             "http://localhost:3000",  # React dev server
-             "http://127.0.0.1:3000",  # Alternative React dev server
          ], 
          supports_credentials=True, 
          allow_headers=['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With'],
@@ -81,8 +67,15 @@ def create_app():
                        request.method, request.url, request.remote_addr, request.headers.get('User-Agent'))
             logger.info('Request Headers: %s', dict(request.headers))
             logger.info('Request Path: %s, Args: %s', request.path, request.args)
-            if request.is_json and request.get_json():
-                logger.info('Request Body: %s', request.get_json())
+            
+            # Safely check for JSON content
+            if request.is_json:
+                try:
+                    json_data = request.get_json(silent=True)
+                    if json_data:
+                        logger.info('Request Body: %s', json_data)
+                except Exception as json_error:
+                    logger.warning('Failed to parse JSON body: %s', str(json_error))
             elif request.data:
                 logger.info('Request Data: %s', request.data.decode('utf-8', errors='replace'))
         except Exception as e:
@@ -138,6 +131,7 @@ def create_app():
                 "/api/v1/analytics/tasks/distribution",
                 "/api/v1/analytics/user/<user_id>/stats",
                 "/api/v1/analytics/team/<team_id>/performance",
+                "/api/v1/reports",
                 "/api/v1/reports/generate",
                 "/api/v1/reports/<job_id>",
                 "/api/v1/reports/<report_id>/download"
@@ -357,16 +351,158 @@ def create_app():
         })
 
     # -------- Reports (RQ) --------
-    @app.post("/api/v1/reports/generate")
-    @jwt_required
+    @app.route("/api/v1/reports/generate", methods=["POST", "OPTIONS"])
     def reports_generate():
-        data = request.get_json(silent=True) or {}
-        job = q.enqueue("tasks.report_job", json.dumps(data), db_url, reports_dir, job_timeout=600)
-        return jsonify({"job_id": job.id}), 202
+        # Handle preflight requests
+        if request.method == "OPTIONS":
+            return jsonify({"status": "ok"}), 200
+        
+        # Apply JWT authentication only for POST requests
+        if request.method == "POST":
+            # Manually implement JWT verification logic
+            auth_header = request.headers.get("Authorization")
+            if not auth_header or not auth_header.startswith("Bearer "):
+                return jsonify({
+                    "error": "Unauthorized",
+                    "message": "Authentication is required to access this resource. Please provide a valid JWT token.",
+                    "status_code": 401,
+                    "hint": "Include 'Authorization: Bearer <token>' header in your request"
+                }), 401
+            
+            try:
+                token = auth_header.split(" ")[1]
+                # Use the same decoding logic as in jwt_auth.py
+                from jwt_auth import _decode_rs256
+                claims = _decode_rs256(token)
+                
+                g.user_id = claims.get("user_id") or claims.get("sub")
+                g.is_staff = bool(claims.get("is_staff") or claims.get("staff", False))
+                g.scopes = claims.get("scope") or claims.get("scopes") or []
+                
+                if not g.user_id:
+                    raise Exception("No user_id in token")
+                    
+            except Exception as e:
+                logger.error(f"JWT verification failed: {str(e)}")
+                return jsonify({
+                    "error": "Unauthorized",
+                    "message": "Invalid or expired JWT token.",
+                    "status_code": 401
+                }), 401
+            
+            data = request.get_json(silent=True) or {}
+            # Add user_id to the job metadata for filtering
+            data['user_id'] = g.user_id
+            job = q.enqueue("tasks.report_job", json.dumps(data), db_url, reports_dir, 
+                           job_timeout=600, job_id=f"report_{g.user_id}_{uuid.uuid4()}")
+            return jsonify({"job_id": job.id}), 202
+
+    @app.get("/api/v1/reports")
+    @jwt_required
+    def list_reports():
+        """List all reports/jobs for the current user"""
+        try:
+            # Get all jobs from the queue using correct RQ methods
+            jobs = []
+            user_prefix = f"report_{g.user_id}_"
+            
+            def process_job(job):
+                """Process a single job and return job data if it belongs to current user"""
+                try:
+                    # Filter jobs by user_id in job_id prefix
+                    if not job.id.startswith(user_prefix):
+                        return None
+                        
+                    job_data = {
+                        "job_id": job.id,
+                        "status": job.get_status(),
+                        "created_at": job.created_at.isoformat() if job.created_at else None,
+                        "started_at": job.started_at.isoformat() if job.started_at else None,
+                        "ended_at": job.ended_at.isoformat() if job.ended_at else None,
+                        "result": job.result if job.result else None,
+                        "exc_info": str(job.exc_info) if hasattr(job, 'exc_info') and job.exc_info else None
+                    }
+                    return job_data
+                except Exception as job_error:
+                    logger.warning(f"Error processing job {job.id}: {str(job_error)}")
+                    return None
+            
+            # Get jobs from different registries
+            from rq.registry import StartedJobRegistry, FinishedJobRegistry, FailedJobRegistry
+            
+            # Get queued jobs
+            for job in q.jobs:
+                job_data = process_job(job)
+                if job_data:
+                    jobs.append(job_data)
+            
+            # Get started jobs
+            started_registry = StartedJobRegistry(queue=q)
+            for job_id in started_registry.get_job_ids():
+                if job_id.startswith(user_prefix):
+                    try:
+                        job = q.fetch_job(job_id)
+                        if job:
+                            job_data = process_job(job)
+                            if job_data and not any(j["job_id"] == job.id for j in jobs):
+                                jobs.append(job_data)
+                    except Exception as job_error:
+                        logger.warning(f"Error processing started job {job_id}: {str(job_error)}")
+                        continue
+            
+            # Get finished jobs
+            finished_registry = FinishedJobRegistry(queue=q)
+            for job_id in finished_registry.get_job_ids():
+                if job_id.startswith(user_prefix):
+                    try:
+                        job = q.fetch_job(job_id)
+                        if job:
+                            job_data = process_job(job)
+                            if job_data and not any(j["job_id"] == job.id for j in jobs):
+                                jobs.append(job_data)
+                    except Exception as job_error:
+                        logger.warning(f"Error processing finished job {job_id}: {str(job_error)}")
+                        continue
+            
+            # Get failed jobs
+            failed_registry = FailedJobRegistry(queue=q)
+            for job_id in failed_registry.get_job_ids():
+                if job_id.startswith(user_prefix):
+                    try:
+                        job = q.fetch_job(job_id)
+                        if job:
+                            job_data = process_job(job)
+                            if job_data and not any(j["job_id"] == job.id for j in jobs):
+                                jobs.append(job_data)
+                    except Exception as job_error:
+                        logger.warning(f"Error processing failed job {job_id}: {str(job_error)}")
+                        continue
+            
+            # Sort by created_at (most recent first)
+            jobs.sort(key=lambda x: x["created_at"] or "", reverse=True)
+            
+            logger.info(f"Found {len(jobs)} jobs for user {g.user_id}")
+            
+            return jsonify({
+                "jobs": jobs,
+                "total": len(jobs)
+            })
+            
+        except Exception as e:
+            logger.error(f"Error listing reports: {str(e)}", exc_info=True)
+            return jsonify({
+                "error": "Error fetching reports",
+                "message": str(e)
+            }), 500
 
     @app.get("/api/v1/reports/<job_id>")
     @jwt_required
     def reports_status(job_id):
+        # Check if user owns this job
+        user_prefix = f"report_{g.user_id}_"
+        if not job_id.startswith(user_prefix):
+            abort(403)  # Forbidden - user doesn't own this job
+            
         job = q.fetch_job(job_id)
         if not job:
             abort(404)
@@ -375,6 +511,9 @@ def create_app():
     @app.get("/api/v1/reports/<report_id>/download")
     @jwt_required
     def reports_download(report_id):
+        # Additional security: verify that the report file exists and belongs to user
+        # For now, we'll allow download if file exists, but in production you might want
+        # to add user ownership verification to the filename or database
         path = os.path.join(reports_dir, f"{report_id}.csv")
         if not os.path.exists(path):
             abort(404)

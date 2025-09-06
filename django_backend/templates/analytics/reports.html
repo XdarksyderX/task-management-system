@@ -342,9 +342,9 @@
                 }
 
                 const data = await response.json();
-                showMessage(`Report in queue. Job ID: ${data.job_id}`, 'success');
+                showMessage(`Reporte en cola. Job ID: ${data.job_id}`, 'success');
                 
-                // Add to current jobs and refresh
+                // Refresh jobs list after generating report
                 setTimeout(() => {
                     refreshJobs();
                 }, 1000);
@@ -431,6 +431,21 @@
                 const statusClass = `status-${job.status}`;
                 const canDownload = job.status === 'finished' && job.result && job.result.report_id;
                 
+                // Format timestamps
+                let timeInfo = '';
+                if (job.created_at) {
+                    const createdAt = new Date(job.created_at);
+                    timeInfo = `Creado: ${createdAt.toLocaleString()}`;
+                }
+                
+                // Show error info for failed jobs
+                let errorInfo = '';
+                if (job.status === 'failed' && job.exc_info) {
+                    errorInfo = `<div style="margin-top: 0.5rem; font-size: 0.8rem; color: #dc3545;">
+                        Error: ${job.exc_info.split('\n').pop() || 'Unknown error'}
+                    </div>`;
+                }
+                
                 html += `
                     <div class="job-item">
                         <div class="job-info">
@@ -438,7 +453,10 @@
                             <span class="job-status ${statusClass}">${job.status}</span>
                             ${job.result ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
                                 ${job.result.count ? `${job.result.count} registros` : ''}
+                                ${job.result.query ? `- Tipo: ${job.result.query}` : ''}
                             </div>` : ''}
+                            ${timeInfo ? `<div style="margin-top: 0.25rem; font-size: 0.8rem; color: #888;">${timeInfo}</div>` : ''}
+                            ${errorInfo}
                         </div>
                         <div class="job-actions">
                             <button class="btn btn-secondary btn-small" onclick="refreshJobStatus('${job.job_id}')">
@@ -446,7 +464,7 @@
                             </button>
                             ${canDownload ? `
                                 <button class="btn btn-success btn-small" onclick="downloadReport('${job.result.report_id}')">
-                                    Download
+                                    Descargar
                                 </button>
                             ` : ''}
                         </div>
@@ -470,12 +488,50 @@
             }
         }
 
-        function refreshJobs() {
-            // This would normally fetch all jobs from an endpoint
-            // For now, we just refresh the status of existing jobs
-            currentJobs.forEach(job => {
-                refreshJobStatus(job.job_id);
-            });
+        async function refreshJobs() {
+            try {
+                showJobsLoading(true);
+                
+                const analyticsUrl = window.ANALYTICS_SERVICE_URL || 'http://localhost:5000';
+                
+                const response = await fetch(`${analyticsUrl}/api/v1/reports`, {
+                    headers: {
+                        'Authorization': `Bearer ${getJWTToken() || ''}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error fetching reports');
+                }
+
+                const data = await response.json();
+                currentJobs = data.jobs || [];
+                
+                showJobsLoading(false);
+                displayJobs();
+                
+            } catch (error) {
+                console.error('Error fetching reports:', error);
+                showJobsLoading(false);
+                showJobsError(true);
+            }
+        }
+
+        function showJobsLoading(show) {
+            document.getElementById('jobs-loading').style.display = show ? 'block' : 'none';
+            document.getElementById('jobs-error').style.display = 'none';
+            if (!show) {
+                document.getElementById('jobs-list').style.display = 'block';
+            }
+        }
+
+        function showJobsError(show) {
+            document.getElementById('jobs-error').style.display = show ? 'block' : 'none';
+            document.getElementById('jobs-loading').style.display = 'none';
+            if (show) {
+                document.getElementById('jobs-list').style.display = 'none';
+            }
         }
 
         // Form submission
@@ -484,16 +540,16 @@
             generateReport();
         });
 
-        // Auto-refresh jobs every 5 seconds
+        // Auto-refresh jobs every 10 seconds
         refreshInterval = setInterval(() => {
             if (currentJobs.length > 0) {
                 refreshJobs();
             }
-        }, 5000);
+        }, 10000);
 
         // Initial load
         document.addEventListener('DOMContentLoaded', function() {
-            displayJobs();
+            refreshJobs(); // Load existing reports on page load
         });
 
         // Cleanup interval on page unload
