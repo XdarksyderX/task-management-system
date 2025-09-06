@@ -1,12 +1,12 @@
 # Task Management System
 
-Sistema de gestión de tareas con Django, WebSockets y autenticación JWT con RSA.
+Task management system with Django, WebSockets, and RSA JWT authentication.
 
-## Configuración inicial
+## Initial Setup
 
-### 1. Variables de entorno
+### 1. Environment Variables
 
-Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
+Create a `.env` file in the project root with the following variables:
 
 ```env
 # --- Django ---
@@ -35,80 +35,127 @@ CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/1
 ```
 
-### 2. Generar claves RSA para JWT
+### 2. Generate RSA Keys for JWT
 
-**IMPORTANTE**: Antes de ejecutar Docker Compose, debes generar las claves RSA para la autenticación JWT:
+**IMPORTANT**: Before running Docker Compose, you must generate the RSA keys for JWT authentication:
 
 ```bash
-# Desde la raíz del proyecto
+# From the project root
 cd django_backend
 ./scripts/keygen.sh
 ```
 
-Este comando creará los archivos:
-- `config/keys/jwt_private_key.pem` - Clave privada para firmar tokens
-- `config/keys/jwt_public_key.pem` - Clave pública para verificar tokens
+This command will create the files:
+- `config/keys/jwt_private_key.pem` - Private key for signing tokens
+- `config/keys/jwt_public_key.pem` - Public key for verifying tokens
 
-**Nota**: Las claves RSA son críticas para la seguridad. Asegúrate de:
-- No subirlas al repositorio (están en `.gitignore`)
-- Generar nuevas claves para cada entorno (desarrollo, producción)
-- Mantener la clave privada segura
+**Note**: RSA keys are critical for security. Ensure:
+- Do not upload them to the repository (they are in `.gitignore`)
+- Generate new keys for each environment (development, production)
+- Keep the private key secure
 
-### 3. Ejecutar el sistema
+### 3. Run the System
 
 ```bash
-# Construir e iniciar todos los servicios
-docker-compose up --build
+# Build and start all services
+docker compose up --build
 
-# O en segundo plano
-docker-compose up -d --build
+# Or in the background
+docker compose up -d --build
 ```
 
-## Servicios
+## Seed Data
 
-El sistema incluye los siguientes servicios:
-
-- **web** (puerto 8000): Servidor Django principal
-- **websocket** (puerto 8002): Servidor WebSocket para tiempo real
-- **worker**: Worker de Celery para tareas en segundo plano
-- **beat**: Scheduler de Celery para tareas periódicas
-- **db**: Base de datos PostgreSQL
-- **redis**: Cache y broker de mensajes
-
-## Endpoints importantes
-
-- `http://localhost:8000/` - Página principal
-- `http://localhost:8000/admin/` - Panel de administración
-- `http://localhost:8000/.well-known/jwks.json` - JWKS para verificación JWT
-- `http://localhost:8000/api/auth/login/` - Login API
-
-## Desarrollo
-
-### Ejecutar tests
+To populate the database with sample data, run the seed command:
 
 ```bash
-# Tests completos
-docker-compose exec web python manage.py test
+# Run from the web container
+docker compose exec web python manage.py seed
 
-# Tests específicos
-docker-compose exec web python manage.py test apps.tasks.tests
-docker-compose exec web python manage.py test apps.common.tests
+# Or using the script directly
+docker compose exec web bash scripts/seed.sh
+```
+
+### Created Data
+
+The seed script creates:
+- **1 admin user**: `admin` / `admin123`
+- **25 regular users**: with random names and password `password123`
+- **12 teams**: one per department (Engineering, Product, Design, etc.)
+- **17 tags**: frontend, backend, database, api, etc.
+- **8 task templates**: Bug Fix, Feature Implementation, etc.
+- **100 tasks**: with random states, priorities, and assignments
+- **Comments**: on approximately 60% of tasks
+
+### Sample Users
+
+After running the seed, you'll see a list of sample users like:
+
+```
+Sample users created:
+- alicesmith0 (password123)
+- bobsmith1 (password123)
+- charliesmith2 (password123)
+- dianajohnson3 (password123)
+- evewilliams4 (password123)
+```
+
+All regular users use the password `password123`.
+
+### Customization
+
+You can customize the amount of data generated:
+
+```bash
+# Create 50 users and 200 tasks
+docker compose exec web python manage.py seed --users 50 --tasks 200
+```
+
+## Services
+
+The system includes the following services:
+
+- **web** (port 8000): Main Django server
+- **websocket** (port 8002): WebSocket server for real-time
+- **worker**: Celery worker for background tasks
+- **beat**: Celery scheduler for periodic tasks
+- **db**: PostgreSQL database
+- **redis**: Cache and message broker
+
+## Important Endpoints
+
+- `http://localhost:8000/` - Home page
+- `http://localhost:8000/admin/` - Admin panel
+- `http://localhost:8000/.well-known/jwks.json` - JWKS for JWT verification
+- `http://localhost:8000/api/auth/login/` - Login API
+
+## Development
+
+### Run Tests
+
+```bash
+# Full tests
+docker compose exec web python manage.py test
+
+# Specific tests
+docker compose exec web python manage.py test apps.tasks.tests
+docker compose exec web python manage.py test apps.common.tests
 ```
 
 ### Logs
 
 ```bash
-# Ver logs de todos los servicios
-docker-compose logs -f
+# View logs for all services
+docker compose logs -f
 
-# Ver logs de un servicio específico
-docker-compose logs -f web
-docker-compose logs -f websocket
+# View logs for a specific service
+docker compose logs -f web
+docker compose logs -f websocket
 ```
 
-### Regenerar claves RSA
+### Regenerate RSA Keys
 
-Si necesitas regenerar las claves (por ejemplo, para un nuevo entorno):
+If you need to regenerate the keys (for example, for a new environment):
 
 ```bash
 cd django_backend
@@ -116,8 +163,8 @@ rm -f config/keys/jwt_*.pem
 ./scripts/keygen.sh
 ```
 
-Luego reinicia los servicios:
+Then restart the services:
 
 ```bash
-docker-compose restart
+docker compose restart
 ```
