@@ -92,7 +92,7 @@ def task_list(request):
         'current_priority': priority,
     }
     
-    return render(request, 'tasks/task_list_ssr.html', context)
+    return render(request, 'tasks/task_list.html', context)
 
 
 @login_required

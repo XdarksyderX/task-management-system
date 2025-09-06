@@ -53,12 +53,12 @@ mkdir -p "$CELERY_BEAT_DIR"
 
 # Setup based on service type
 case "${1:-web}" in
-    web)
+    web|asgi)
         # Web service: run migrations, create superuser
         python manage.py migrate --noinput
         create_superuser
         ;;
-    websocket|worker|beat)
+    worker|beat)
         # Other services: keys already checked
         echo "✅ Service ready to start"
         ;;
@@ -70,12 +70,8 @@ esac
 
 # Start the appropriate service
 case "${1:-web}" in
-  web)
-    python manage.py runserver 0.0.0.0:8000
-    ;;
-  websocket)
-    echo "Starting WebSocket server with Daphne..."
-    daphne -b 0.0.0.0 -p 8002 config.asgi:application
+  web|asgi)
+    daphne -b 0.0.0.0 -p 8000 config.asgi:application
     ;;
   worker)
     celery -A config worker -l info

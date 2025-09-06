@@ -3,10 +3,13 @@ from django.utils.deprecation import MiddlewareMixin
 from django.http import HttpResponseRedirect
 from urllib.parse import urlencode
 import urllib.parse
+import logging
 
 from .auth import CookieJWTAuthentication
 from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
+
+logger = logging.getLogger(__name__)
 
 class CookieJWTHTTPMiddleware(MiddlewareMixin):
     """
@@ -41,12 +44,20 @@ class CookieJWTWebSocketMiddleware(BaseMiddleware):
 
 	async def __call__(self, scope, receive, send):
 		try:
+			logger.info(f"WebSocket connection attempt for path: {scope.get('path')}")
 			jwt_token = await self.get_token(scope)
 			if jwt_token:
+				logger.info("JWT token found, authenticating user")
 				user = await self.get_user_from_token(jwt_token)
+				if user.is_authenticated:
+					logger.info(f"User authenticated: {user.username}")
+				else:
+					logger.warning("Token found but user authentication failed")
 			else:
+				logger.warning("No JWT token found in WebSocket connection")
 				user = AnonymousUser()
-		except Exception:
+		except Exception as e:
+			logger.error(f"Error in WebSocket authentication: {str(e)}")
 			user = AnonymousUser()
 
 		scope['user'] = user
@@ -54,25 +65,26 @@ class CookieJWTWebSocketMiddleware(BaseMiddleware):
 
 	async def get_token(self, scope):
 		"""
-		Extracts the JWT token from cookies, query string, or headers.
+		Extracts the JWT token from cookies or headers.
+		Query parameters are NOT used for security reasons.
 		"""
-		if scope['type'] == 'websocket':
-			query_string = scope.get('query_string', b'').decode('utf-8')
-			query_params = urllib.parse.parse_qs(query_string)
-			token = query_params.get('token', [None])[0]
-			if token:
-				return token
+		# Try cookies first (most secure for WebSockets)
 		headers = dict(scope.get('headers', []))
 		cookie_header = headers.get(b'cookie', b'').decode('utf-8')
 		if cookie_header:
 			cookies = {k.strip(): v for k, v in (c.split('=', 1) for c in cookie_header.split(';') if '=' in c)}
 			token = cookies.get('access_token')
 			if token:
+				logger.info("Token found in cookies")
 				return token
+
+		# Try Authorization header as fallback
 		auth_header = headers.get(b'authorization', b'').decode('utf-8')
 		if auth_header.startswith('Bearer '):
+			logger.info("Token found in Authorization header")
 			return auth_header.split(' ')[1]
 
+		logger.warning("No token found in cookies or headers")
 		return None
 
 	@database_sync_to_async
@@ -82,8 +94,11 @@ class CookieJWTWebSocketMiddleware(BaseMiddleware):
 		"""
 		try:
 			validated_token = self.auth.get_validated_token(token)
-			return self.auth.get_user(validated_token)
-		except Exception:
+			user = self.auth.get_user(validated_token)
+			logger.info(f"Successfully authenticated user: {user.username}")
+			return user
+		except Exception as e:
+			logger.error(f"Token validation failed: {str(e)}")
 			return AnonymousUser()
 
 

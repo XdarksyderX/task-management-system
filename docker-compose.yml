@@ -34,7 +34,7 @@ services:
     container_name: tms_web
     restart: unless-stopped
     env_file: .env
-    command: ["/app/scripts/entrypoint.sh", "web"]
+    command: ["/app/scripts/entrypoint.sh", "asgi"]
     ports:
       - "8000:8000"
     depends_on:
@@ -49,24 +49,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
-  websocket:
-    build:
-      context: ./django_backend
-      dockerfile: Dockerfile
-    container_name: tms_websocket
-    restart: unless-stopped
-    env_file: .env
-    command: ["/app/scripts/entrypoint.sh", "websocket"]
-    ports:
-      - "8002:8002"
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./django_backend:/app
 
   worker:
     build:

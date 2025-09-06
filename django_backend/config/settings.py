@@ -139,11 +139,12 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
 }
 
+# Authentication Cookies Configuration
 AUTH_COOKIE_ACCESS = "access_token"
 AUTH_COOKIE_REFRESH = "refresh_token"
-AUTH_COOKIE_SECURE = False
-AUTH_COOKIE_HTTPONLY = False
-AUTH_COOKIE_SAMESITE = "Lax"
+AUTH_COOKIE_SECURE = False  # Set to True in production with HTTPS
+AUTH_COOKIE_HTTPONLY = False  # False so JavaScript can read the token
+AUTH_COOKIE_SAMESITE = "Lax"  # Lax for same-site requests
 
 # Celery Beat Schedule
 from celery.schedules import crontab

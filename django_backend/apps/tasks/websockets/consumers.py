@@ -31,6 +31,15 @@ class TaskCommentsConsumer(AsyncWebsocketConsumer):
         self.task_id = self.scope['url_route']['kwargs']['task_id']
         self.room_group_name = f'task_comments_{self.task_id}'
         
+        # Check authentication first
+        user = self.scope.get('user')
+        if not user or not user.is_authenticated:
+            print(f"[DEBUG] WebSocket connection rejected: User not authenticated. User: {user}")
+            await self.close(code=4001)  # Unauthorized
+            return
+            
+        print(f"[DEBUG] WebSocket connection for task {self.task_id} by user {user.username}")
+        
         # Check if user has permission to view this task
         if await self.has_task_permission():
             # Join room group
@@ -39,10 +48,12 @@ class TaskCommentsConsumer(AsyncWebsocketConsumer):
                 self.channel_name
             )
             await self.accept()
+            print(f"[DEBUG] WebSocket connection accepted for task {self.task_id}")
             
             # Send initial comments
             await self.send_initial_comments()
         else:
+            print(f"[DEBUG] WebSocket connection rejected: No permission for task {self.task_id}")
             await self.close(code=4003)  # Forbidden
     
     async def disconnect(self, close_code):
@@ -267,191 +278,4 @@ class TaskCommentsConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'type': 'comment.history',
             'comments': serialized_comments
-        }))
-
-
-class TaskRoomConsumer(AsyncWebsocketConsumer):
-    """
-    WebSocket consumer for general task room functionality.
-    
-    Manages real-time updates for task changes, status updates,
-    and user presence in task rooms.
-    """
-    
-    async def connect(self):
-        """Accept WebSocket connection and join task room."""
-        self.task_id = self.scope['url_route']['kwargs']['task_id']
-        self.room_group_name = f'task_room_{self.task_id}'
-        
-        if await self.has_task_permission():
-            await self.channel_layer.group_add(
-                self.room_group_name,
-                self.channel_name
-            )
-            await self.accept()
-            
-            # Notify others that user joined
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'user_joined',
-                    'user': await self.get_user_info()
-                }
-            )
-        else:
-            await self.close(code=4003)
-    
-    async def disconnect(self, close_code):
-        """Leave task room."""
-        # Notify others that user left
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'user_left',
-                'user': await self.get_user_info()
-            }
-        )
-        
-        await self.channel_layer.group_discard(
-            self.room_group_name,
-            self.channel_name
-        )
-    
-    async def receive(self, text_data):
-        """Handle incoming WebSocket messages."""
-        try:
-            text_data_json = json.loads(text_data)
-            message_type = text_data_json.get('type')
-            
-            if message_type == 'task.update':
-                await self.handle_task_update(text_data_json)
-            elif message_type == 'user.typing':
-                await self.handle_user_typing(text_data_json)
-                
-        except json.JSONDecodeError:
-            await self.send(text_data=json.dumps({
-                'type': 'error',
-                'message': 'Invalid JSON format'
-            }))
-    
-    async def handle_task_update(self, data):
-        """Handle task updates."""
-        # Broadcast task update to room
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'task_updated',
-                'update_data': data.get('data', {}),
-                'user': await self.get_user_info()
-            }
-        )
-    
-    async def handle_user_typing(self, data):
-        """Handle user typing indicators."""
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                'type': 'user_typing',
-                'user': await self.get_user_info(),
-                'is_typing': data.get('is_typing', False)
-            }
-        )
-    
-    # WebSocket event handlers
-    async def user_joined(self, event):
-        """Send user joined event to WebSocket."""
-        await self.send(text_data=json.dumps({
-            'type': 'user.joined',
-            'user': event['user']
-        }))
-    
-    async def user_left(self, event):
-        """Send user left event to WebSocket."""
-        await self.send(text_data=json.dumps({
-            'type': 'user.left',
-            'user': event['user']
-        }))
-    
-    async def task_updated(self, event):
-        """Send task updated event to WebSocket."""
-        await self.send(text_data=json.dumps({
-            'type': 'task.updated',
-            'data': event['update_data'],
-            'user': event['user']
-        }))
-    
-    async def user_typing(self, event):
-        """Send user typing event to WebSocket."""
-        # Don't send typing indicator back to the typer
-        user = await self.get_user_info()
-        if user['id'] != event['user']['id']:
-            await self.send(text_data=json.dumps({
-                'type': 'user.typing',
-                'user': event['user'],
-                'is_typing': event['is_typing']
-            }))
-    
-    @database_sync_to_async
-    def has_task_permission(self):
-        """Check if user has permission to view this task."""
-        try:
-            user = self.scope["user"]
-            if not user.is_authenticated:
-                return False
-            
-            task = Task.objects.get(id=self.task_id)
-            return (
-                task.assigned_to.filter(id=user.id).exists() or
-                task.created_by == user or
-                user.is_staff
-            )
-        except ObjectDoesNotExist:
-            return False
-    
-    @database_sync_to_async
-    def get_user_info(self):
-        """Get current user information."""
-        user = self.scope["user"]
-        return {
-            'id': user.id,
-            'username': user.username,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-        }
-
-
-class NotificationConsumer(AsyncWebsocketConsumer):
-    """
-    WebSocket consumer for user notifications.
-    
-    Manages real-time notifications for individual users.
-    """
-    
-    async def connect(self):
-        """Accept WebSocket connection for user notifications."""
-        if self.scope["user"].is_authenticated:
-            self.user_id = self.scope["user"].id
-            self.room_group_name = f'notifications_{self.user_id}'
-            
-            await self.channel_layer.group_add(
-                self.room_group_name,
-                self.channel_name
-            )
-            await self.accept()
-        else:
-            await self.close(code=4001)  # Unauthorized
-    
-    async def disconnect(self, close_code):
-        """Leave notification room."""
-        if hasattr(self, 'room_group_name'):
-            await self.channel_layer.group_discard(
-                self.room_group_name,
-                self.channel_name
-            )
-    
-    async def notification(self, event):
-        """Send notification to WebSocket."""
-        await self.send(text_data=json.dumps({
-            'type': 'notification',
-            'data': event['data']
         }))

@@ -504,7 +504,187 @@
                 window.location.href = '/tasks/';
             }
         }
+
+        // Comments WebSocket functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            const commentList = document.getElementById('comment-list');
+            const commentForm = document.getElementById('comment-form');
+            const commentInput = document.getElementById('comment-input');
+
+            // Get JWT token from cookies
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            // Check if JWT token exists in cookies
+            const jwtToken = getCookie('access_token');
+            if (!jwtToken) {
+                console.error('JWT token not found. User may need to re-login.');
+                alert('Session expired. Please login again.');
+                window.location.href = '/auth/login/';
+                return;
+            }
+
+            // WebSocket will automatically send cookies if same origin
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Use same port as current web page to ensure cookies are sent
+            const wsUrl = `${protocol}//${window.location.host}/ws/tasks/${taskId}/comments/`;
+            const commentSocket = new WebSocket(wsUrl);
+
+            commentSocket.onopen = function(e) {
+                console.log('Comment WebSocket connection established.');
+                // Request existing comments upon connection
+                commentSocket.send(JSON.stringify({
+                    'type': 'comment.fetch'
+                }));
+            };
+
+            commentSocket.onclose = function(e) {
+                if (e.code === 4001) {
+                    console.error('WebSocket connection rejected: Unauthorized. Please login again.');
+                    alert('Session expired. Please login again.');
+                    window.location.href = '/auth/login/';
+                } else if (e.code === 4003) {
+                    console.error('WebSocket connection rejected: Forbidden. You do not have permission to view this task.');
+                    alert('You do not have permission to view this task.');
+                } else {
+                    console.error('Comment WebSocket connection closed unexpectedly. Code:', e.code, 'Reason:', e.reason);
+                }
+            };
+
+            commentSocket.onerror = function(err) {
+                console.error('WebSocket error:', err);
+            };
+
+            commentSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                
+                switch (data.type) {
+                    case 'comment.history':
+                        // Clear existing comments and load history
+                        commentList.innerHTML = '';
+                        data.comments.forEach(comment => {
+                            appendComment(comment);
+                        });
+                        break;
+                    case 'comment.added':
+                        // Append a new comment
+                        appendComment(data.comment);
+                        break;
+                    case 'comment.edited':
+                        // Update an existing comment
+                        updateComment(data.comment);
+                        break;
+                    case 'comment.deleted':
+                        // Remove a deleted comment
+                        removeComment(data.comment_id);
+                        break;
+                    case 'comment.error':
+                        alert(`Error: ${data.message}`);
+                        break;
+                    default:
+                        console.warn('Unknown message type:', data.type);
+                }
+            };
+
+            commentForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                const message = commentInput.value.trim();
+
+                if (message) {
+                    commentSocket.send(JSON.stringify({
+                        'type': 'comment.add',
+                        'content': message
+                    }));
+                    commentInput.value = '';
+                }
+            });
+
+            function appendComment(comment) {
+                const commentItem = document.createElement('div');
+                commentItem.className = 'comment-item';
+                commentItem.dataset.commentId = comment.id;
+
+                const authorName = comment.author_name || 'Anonymous';
+                const createdDate = new Date(comment.created_at).toLocaleString();
+                const isOwnComment = requestUser && comment.author && comment.author.id === requestUser.id;
+
+                commentItem.innerHTML = `
+                    <div class="comment-meta">
+                        <strong>${authorName}</strong>
+                        <span>- ${createdDate}</span>
+                        ${isOwnComment ? `
+                            <div class="comment-actions">
+                                <button onclick="editComment(${comment.id})" class="btn-edit">Edit</button>
+                                <button onclick="deleteComment(${comment.id})" class="btn-delete">Delete</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div class="comment-content">
+                        <p>${comment.content}</p>
+                    </div>
+                `;
+                
+                commentList.appendChild(commentItem);
+                // Scroll to the bottom of the comment list
+                commentList.scrollTop = commentList.scrollHeight;
+            }
+
+            function updateComment(comment) {
+                const commentItem = commentList.querySelector(`[data-comment-id="${comment.id}"]`);
+                if (commentItem) {
+                    const contentElement = commentItem.querySelector('.comment-content p');
+                    if (contentElement) {
+                        contentElement.textContent = comment.content;
+                    }
+                }
+            }
+
+            function removeComment(commentId) {
+                const commentItem = commentList.querySelector(`[data-comment-id="${commentId}"]`);
+                if (commentItem) {
+                    commentItem.remove();
+                }
+            }
+
+            // Global functions for comment actions
+            window.editComment = function(commentId) {
+                const commentItem = commentList.querySelector(`[data-comment-id="${commentId}"]`);
+                if (commentItem) {
+                    const contentElement = commentItem.querySelector('.comment-content p');
+                    const currentContent = contentElement.textContent;
+                    
+                    const newContent = prompt('Edit comment:', currentContent);
+                    if (newContent && newContent.trim() !== currentContent) {
+                        commentSocket.send(JSON.stringify({
+                            'type': 'comment.edit',
+                            'comment_id': commentId,
+                            'content': newContent.trim()
+                        }));
+                    }
+                }
+            };
+
+            window.deleteComment = function(commentId) {
+                if (confirm('Are you sure you want to delete this comment?')) {
+                    commentSocket.send(JSON.stringify({
+                        'type': 'comment.delete',
+                        'comment_id': commentId
+                    }));
+                }
+            };
+        });
     </script>
-    <script src="{% static 'tasks/js/comments.js' %}"></script>
 </body>
 </html>
