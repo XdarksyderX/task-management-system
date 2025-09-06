@@ -14,18 +14,52 @@ from .serializers import (
     TeamSerializer, TeamCreateSerializer, MemberActionSerializer, TeamMembersSerializer
 )
 
+# Import Kafka event publishers
+from ..producer import (
+    publish_user_registered,
+    publish_user_login,
+    publish_user_logout,
+    publish_user_login_failed,
+    publish_team_created
+)
+
 User = get_user_model()
 
 class RegisterAPIView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
     serializer_class = RegisterSerializer
+    
+    def perform_create(self, serializer):
+        user = serializer.save()
+        # Publish user registration event
+        publish_user_registered(
+            user.id,
+            user.username,
+            user.email,
+            is_staff=user.is_staff,
+            date_joined=user.date_joined.isoformat()
+        )
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom login view that sets JWT tokens in secure cookies with RSA signing"""
     
+    def get_client_ip(self, request):
+        """Get client IP address"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0]
+        return request.META.get('REMOTE_ADDR')
+    
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
+        
+        # Handle login failure
+        if response.status_code != 200:
+            username = request.data.get('username', 'unknown')
+            ip_address = self.get_client_ip(request)
+            reason = 'Invalid credentials'
+            publish_user_login_failed(username, ip_address, reason)
         
         if response.status_code == 200:
             # Get tokens from response data
@@ -47,6 +81,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 user_id = decoded_data.get('user_id')
                 user = User.objects.get(id=user_id)
                 username = user.username
+                
+                # Publish user login event
+                ip_address = self.get_client_ip(request)
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                publish_user_login(user_id, username, ip_address, user_agent)
             except Exception:
                 username = None
             
@@ -96,6 +135,10 @@ class CustomTokenBlacklistView(TokenBlacklistView):
     """Custom logout view that clears JWT cookies"""
     
     def post(self, request, *args, **kwargs):
+        # Publish logout event if user is authenticated
+        if request.user and request.user.is_authenticated:
+            publish_user_logout(request.user.id, request.user.username)
+        
         # Try to blacklist refresh token
         try:
             refresh_token = request.COOKIES.get(getattr(settings, 'AUTH_COOKIE_REFRESH', 'refresh_token'))
@@ -153,6 +196,13 @@ class TeamViewSet(viewsets.ModelViewSet):
         team = serializer.save(created_by=self.request.user)
         # Automatically add creator as member
         team.add_member(self.request.user)
+        # Publish team creation event
+        publish_team_created(
+            self.request.user.id,
+            team.id,
+            team.name,
+            team.description
+        )
     
     def destroy(self, request, *args, **kwargs):
         team = self.get_object()

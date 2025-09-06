@@ -6,24 +6,6 @@ from django.db import models
 from apps.users.models import Team
 from django.core.paginator import Paginator
 
-# Import Kafka event publishers
-from .producer import (
-    publish_team_deleted,
-    publish_team_member_left,
-    publish_team_member_added,
-    publish_team_member_removed,
-    publish_team_updated
-)
-
-
-def login_page(request):
-    return render(request, "auth/login.html")
-
-def register_page(request):
-    return render(request, "auth/register.html")
-
-
-# ==================== TEAM VIEWS ====================
 
 @login_required
 def team_list(request):
@@ -44,10 +26,7 @@ def team_list(request):
                 try:
                     team = Team.objects.get(id=team_id, created_by=request.user)
                     team_name = team.name
-                    team_id_for_event = team.id
                     team.delete()
-                    # Publish team deletion event
-                    publish_team_deleted(request.user.id, team_id_for_event, team_name)
                     messages.success(request, f'Team "{team_name}" deleted successfully.')
                 except Team.DoesNotExist:
                     messages.error(request, 'Team not found or you do not have permission to delete it.')
@@ -59,8 +38,6 @@ def team_list(request):
                     team = Team.objects.get(id=team_id)
                     if request.user in team.members.all():
                         team.members.remove(request.user)
-                        # Publish team member left event
-                        publish_team_member_left(request.user.id, team.id, team.name)
                         messages.success(request, f'You have left the team "{team.name}".')
                     else:
                         messages.error(request, 'You are not a member of this team.')
@@ -100,14 +77,6 @@ def team_detail(request, team_id):
                     
                     if user_to_add not in team.members.all() and user_to_add != team.created_by:
                         team.members.add(user_to_add)
-                        # Publish team member added event
-                        publish_team_member_added(
-                            request.user.id, 
-                            team.id, 
-                            team.name, 
-                            user_to_add.id, 
-                            user_to_add.username
-                        )
                         messages.success(request, f'User {user_to_add.username} added to team.')
                     else:
                         messages.warning(request, 'User is already a member of this team.')
@@ -122,31 +91,18 @@ def team_detail(request, team_id):
                     User = get_user_model()
                     user_to_remove = User.objects.get(id=user_id)
                     team.members.remove(user_to_remove)
-                    # Publish team member removed event
-                    publish_team_member_removed(
-                        request.user.id,
-                        team.id,
-                        team.name,
-                        user_to_remove.id,
-                        user_to_remove.username
-                    )
                     messages.success(request, f'User {user_to_remove.username} removed from team.')
                 except User.DoesNotExist:
                     messages.error(request, 'User not found.')
         
         elif action == 'leave_team' and request.user in team.members.all():
             team.members.remove(request.user)
-            # Publish team member left event
-            publish_team_member_left(request.user.id, team.id, team.name)
             messages.success(request, f'You have left the team "{team.name}".')
             return redirect('users:team_list')
         
         elif action == 'delete_team' and team.created_by == request.user:
             team_name = team.name
-            team_id_for_event = team.id
             team.delete()
-            # Publish team deletion event
-            publish_team_deleted(request.user.id, team_id_for_event, team_name)
             messages.success(request, f'Team "{team_name}" has been deleted successfully.')
             return redirect('users:team_list')
         
@@ -178,10 +134,7 @@ def team_edit(request, team_id):
         if action == 'delete_team':
             # Delete the team
             team_name = team.name
-            team_id_for_event = team.id
             team.delete()
-            # Publish team deletion event
-            publish_team_deleted(request.user.id, team_id_for_event, team_name)
             messages.success(request, f'Team "{team_name}" has been deleted successfully.')
             return redirect('users:team_list')
         
@@ -191,21 +144,9 @@ def team_edit(request, team_id):
             description = request.POST.get('description', '').strip()
             
             if name:
-                # Track changes for event
-                changes = {}
-                if team.name != name:
-                    changes['name'] = {'old': team.name, 'new': name}
-                if team.description != description:
-                    changes['description'] = {'old': team.description, 'new': description}
-                
                 team.name = name
                 team.description = description
                 team.save()
-                
-                # Publish team updated event if there were changes
-                if changes:
-                    publish_team_updated(request.user.id, team.id, team.name, changes)
-                
                 messages.success(request, f'Team "{team.name}" updated successfully!')
                 return redirect('users:team_detail', team_id=team.id)
             else:

@@ -4,6 +4,23 @@ from django.contrib import messages
 from django.http import JsonResponse
 from .models import Task, Tag, TaskTemplate, TaskStatus, TaskPriority
 
+# Import Kafka event publishers
+from .producer import (
+    publish_task_created,
+    publish_task_updated,
+    publish_task_deleted,
+    publish_task_status_changed,
+    publish_task_completed,
+    publish_task_priority_changed,
+    publish_task_archived,
+    publish_tag_created,
+    publish_tag_updated,
+    publish_tag_deleted,
+    publish_template_created,
+    publish_template_updated,
+    publish_template_deleted
+)
+
 
 @login_required
 def task_list(request):
@@ -22,8 +39,19 @@ def task_list(request):
         if action == 'mark_done' and task_id:
             try:
                 task = Task.objects.get(id=task_id, assigned_to=request.user)
+                old_status = task.status
                 task.status = TaskStatus.DONE
                 task.save()
+                # Publish task completion event
+                publish_task_completed(request.user.id, task.id, task.title)
+                # Also publish status change event
+                publish_task_status_changed(
+                    request.user.id, 
+                    task.id, 
+                    task.title, 
+                    old_status, 
+                    TaskStatus.DONE
+                )
                 messages.success(request, f'Task "{task.title}" marked as completed!')
             except Task.DoesNotExist:
                 messages.error(request, 'Task not found.')
@@ -117,6 +145,20 @@ def task_create(request):
                 # Assign to creator by default
                 task.assigned_to.add(request.user)
             
+            # Publish task creation event
+            assigned_to_id = None
+            if task.assigned_to.exists():
+                assigned_to_id = task.assigned_to.first().id
+            
+            publish_task_created(
+                request.user.id,
+                task.id,
+                task.title,
+                task.description,
+                task.priority,
+                assigned_to_id
+            )
+            
             messages.success(request, 'Task created successfully!')
             return redirect('tasks:task_list')
         else:
@@ -196,6 +238,8 @@ def tag_create(request):
                 }
             )
             if created:
+                # Publish tag creation event
+                publish_tag_created(request.user.id, tag.id, tag.name, tag.color)
                 messages.success(request, f'Tag "{name}" created successfully!')
                 return redirect('tasks:tag_list')
             else:
@@ -245,6 +289,15 @@ def template_create(request):
                 created_by=request.user
             )
             
+            # Publish template creation event
+            publish_template_created(
+                request.user.id,
+                template.id,
+                template.name,
+                description,
+                priority
+            )
+            
             messages.success(request, 'Template created successfully!')
             return redirect('template_list')
         else:
@@ -288,7 +341,11 @@ def template_delete(request, pk):
         return redirect('tasks:template_list')
     
     if request.method == 'POST':
+        template_name = template.name
+        template_id = template.id
         template.delete()
+        # Publish template deletion event
+        publish_template_deleted(request.user.id, template_id, template_name)
         messages.success(request, 'Template deleted successfully!')
         return redirect('tasks:template_list')
     
@@ -314,11 +371,22 @@ def task_edit(request, pk):
         return redirect('tasks:task_detail', pk=task.id)
     
     if request.method == 'POST':
+        # Capture original values for change tracking
+        original_title = task.title
+        original_description = task.description
+        original_priority = task.priority
+        original_status = task.status
+        
         # Update task fields
-        task.title = request.POST.get('title', task.title)
-        task.description = request.POST.get('description', task.description)
-        task.priority = request.POST.get('priority', task.priority)
-        task.status = request.POST.get('status', task.status)
+        new_title = request.POST.get('title', task.title)
+        new_description = request.POST.get('description', task.description)
+        new_priority = request.POST.get('priority', task.priority)
+        new_status = request.POST.get('status', task.status)
+        
+        task.title = new_title
+        task.description = new_description
+        task.priority = new_priority
+        task.status = new_status
         
         # Handle estimated hours
         estimated_hours = request.POST.get('estimated_hours')
@@ -362,6 +430,32 @@ def task_edit(request, pk):
             # If no users assigned, keep creator assigned
             task.assigned_to.set([request.user])
         
+        # Publish events for changes
+        changes = {}
+        if original_title != new_title:
+            changes['title'] = {'old': original_title, 'new': new_title}
+        if original_description != new_description:
+            changes['description'] = {'old': original_description, 'new': new_description}
+        if original_priority != new_priority:
+            changes['priority'] = {'old': original_priority, 'new': new_priority}
+            # Also publish specific priority change event
+            publish_task_priority_changed(
+                request.user.id, task.id, task.title, original_priority, new_priority
+            )
+        if original_status != new_status:
+            changes['status'] = {'old': original_status, 'new': new_status}
+            # Also publish specific status change event
+            publish_task_status_changed(
+                request.user.id, task.id, task.title, original_status, new_status
+            )
+            # If task was completed, publish completion event
+            if new_status == TaskStatus.DONE and original_status != TaskStatus.DONE:
+                publish_task_completed(request.user.id, task.id, task.title)
+        
+        # Publish general update event if there were changes
+        if changes:
+            publish_task_updated(request.user.id, task.id, task.title, changes)
+        
         messages.success(request, 'Task updated successfully!')
         return redirect('tasks:task_detail', pk=task.id)
     
@@ -387,8 +481,12 @@ def task_delete(request, pk):
         return redirect('tasks:task_detail', pk=task.id)
     
     if request.method == 'POST':
+        task_title = task.title
+        task_id = task.id
         task.is_archived = True
         task.save()
+        # Publish task archival event
+        publish_task_archived(request.user.id, task_id, task_title)
         messages.success(request, 'Task deleted successfully!')
         return redirect('tasks:task_list')
     

@@ -173,3 +173,10 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Kafka Configuration
+KAFKA_ENABLED = os.getenv("KAFKA_ENABLED", "1") == "1"
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+
+# Event Publisher Configuration
+EVENT_PUBLISHER_TYPE = os.getenv("EVENT_PUBLISHER_TYPE", "kafka")  # kafka, rabbitmq, redis, memory
