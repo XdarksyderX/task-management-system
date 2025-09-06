@@ -21,6 +21,7 @@ POSTGRES_PASSWORD=tasks_pass
 POSTGRES_HOST=db
 POSTGRES_PORT=5432
 
+
 # --- Redis ---
 REDIS_HOST=redis
 REDIS_PORT=6379
@@ -33,6 +34,18 @@ DJANGO_SUPERUSER_PASSWORD=admin123
 # --- Celery ---
 CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/1
+
+# JWT Configuration
+JWT_ISSUER=http://web:8000/
+JWT_JWKS_URL=http://web:8000/.well-known/jwks.json
+
+# Analytics
+ANALYTICS_REDIS_URL=redis://redis:6379/2
+ANALYTICS_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+
+#Kafka
+KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+KAFKA_ENABLED=1
 ```
 
 ### 2. Generate RSA Keys for JWT
@@ -116,7 +129,6 @@ docker compose exec web python manage.py seed --users 50 --tasks 200
 The system includes the following services:
 
 - **web** (port 8000): Main Django server
-- **websocket** (port 8002): WebSocket server for real-time
 - **worker**: Celery worker for background tasks
 - **beat**: Celery scheduler for periodic tasks
 - **db**: PostgreSQL database
