@@ -415,7 +415,7 @@
             });
         }
 
-        // Cargar plantillas al inicializar la página
+        // Load templates on page initialization
         async function loadTemplates() {
             try {
                 const response = await fetch('/api/task-templates/', {
@@ -436,11 +436,11 @@
             }
         }
 
-        // Poblar el selector con las plantillas disponibles
+        // Populate the selector with available templates
         function populateTemplateSelector() {
             const selector = document.getElementById('template_selector');
             
-            // Limpiar opciones existentes
+            // Clear existing options
             selector.innerHTML = '<option value="">-- Select a template to pre-fill fields --</option>';
             
             if (allTemplates.length === 0) {
@@ -452,7 +452,7 @@
                 return;
             }
 
-            // Agregar plantillas
+            // Add templates
             allTemplates.forEach(template => {
                 const option = document.createElement('option');
                 option.value = template.id;
@@ -461,7 +461,7 @@
             });
         }
 
-        // Actualizar selector en caso de error
+        // Update selector in case of error
         function updateTemplateSelectorError() {
             const selector = document.getElementById('template_selector');
             selector.innerHTML = '<option value="">-- Select a template to pre-fill fields --</option>';
@@ -473,7 +473,7 @@
             selector.appendChild(option);
         }
 
-        // Manejar selección de plantilla desde el dropdown
+        // Handle template selection from dropdown
         function handleTemplateSelection(templateId) {
             if (!templateId) {
                 clearTemplateIndicator();
@@ -491,17 +491,17 @@
 
         // Load template data when page loads
         document.addEventListener('DOMContentLoaded', async function() {
-            // Cargar plantillas primero
+            // Load templates first
             await loadTemplates();
             
-            // Verificar si hay un template en la URL
+            // Check if there is a template in the URL
             const templateId = getUrlParameter('template');
             if (templateId) {
-                // Establecer el valor en el selector
+                // Set the value in the selector
                 const selector = document.getElementById('template_selector');
                 selector.value = templateId;
                 
-                // Cargar la plantilla
+                // Load the template
                 await loadTemplate(templateId);
             }
         });

@@ -325,7 +325,7 @@
                 </div>
                 <div class="metric-card">
                     <div class="metric-number" id="done-tasks">-</div>
-                    <div class="metric-label">Tareas Completadas</div>
+                    <div class="metric-label">Completed Tasks</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-number" id="blocked-tasks">-</div>
@@ -375,7 +375,7 @@
             const teamId = parseInt(teamIdInput.value);
             
             if (!teamId || teamId < 1) {
-                alert('Por favor ingresa un ID de equipo válido');
+                alert('Please enter a valid team ID');
                 return;
             }
 
@@ -399,9 +399,9 @@
 
                 if (!response.ok) {
                     if (response.status === 403) {
-                        throw new Error('No tienes permisos para ver este equipo');
+                        throw new Error('You do not have permissions to view this team');
                     }
-                    throw new Error('Error al cargar métricas del equipo');
+                    throw new Error('Error loading team metrics');
                 }
 
                 const data = await response.json();
@@ -486,7 +486,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Tareas Completadas',
+                        label: 'Completed Tasks',
                         data: counts,
                         backgroundColor: 'rgba(102, 126, 234, 0.8)',
                         borderColor: '#667eea',

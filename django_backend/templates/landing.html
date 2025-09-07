@@ -198,35 +198,35 @@
             <h1>Task Management System</h1>
             <p>Organiza, gestiona y completa tus tareas de manera eficiente</p>
             <div class="cta-buttons">
-                <a href="{% url 'users:register' %}" class="btn btn-primary">Comenzar Gratis</a>
-                <a href="{% url 'users:login' %}" class="btn btn-secondary">Iniciar Sesión</a>
+                <a href="{% url 'users:register' %}" class="btn btn-primary">Get Started Free</a>
+                <a href="{% url 'users:login' %}" class="btn btn-secondary">Sign In</a>
             </div>
         </section>
 
         <section class="status">
-            <h3>🚀 Estado del Sistema</h3>
-            <p>Aplicación en desarrollo - Django funcionando correctamente</p>
-            <p><strong>Versión:</strong> 1.0.0 | <strong>Base de datos:</strong> PostgreSQL | <strong>Cache:</strong> Redis</p>
+            <h3>🚀 System Status</h3>
+            <p>Application in development - Django running correctly</p>
+            <p><strong>Version:</strong> 1.0.0 | <strong>Database:</strong> PostgreSQL | <strong>Cache:</strong> Redis</p>
         </section>
 
         <section class="features">
             <div class="container">
-                <h2>Características Principales</h2>
+                <h2>Main Features</h2>
                 <div class="features-grid">
                     <div class="feature">
                         <div class="feature-icon">📋</div>
-                        <h3>Gestión de Tareas</h3>
-                        <p>Crea, edita y organiza tus tareas de manera intuitiva con un sistema completo de gestión.</p>
+                        <h3>Task Management</h3>
+                        <p>Create, edit and organize your tasks intuitively with a complete management system.</p>
                     </div>
                     <div class="feature">
                         <div class="feature-icon">👥</div>
-                        <h3>Colaboración</h3>
-                        <p>Trabaja en equipo con un sistema de usuarios y permisos para proyectos colaborativos.</p>
+                        <h3>Collaboration</h3>
+                        <p>Work as a team with a user and permissions system for collaborative projects.</p>
                     </div>
                     <div class="feature">
                         <div class="feature-icon">📊</div>
-                        <h3>Seguimiento</h3>
-                        <p>Monitorea el progreso de tus proyectos con dashboards y reportes en tiempo real.</p>
+                        <h3>Tracking</h3>
+                        <p>Monitor your project progress with real-time dashboards and reports.</p>
                     </div>
                 </div>
             </div>
@@ -246,15 +246,15 @@
             return null;
         }
 
-        // Verificar estado de autenticación
+        // Check authentication status
         document.addEventListener('DOMContentLoaded', function() {
             const token = getCookie('access_token');
             if (token) {
-                // Si el usuario está autenticado, mostrar opciones diferentes
+                // If user is authenticated, show different options
                 const navLinks = document.querySelector('.nav-links');
                 navLinks.innerHTML = `
                     <a href="/dashboard/">Dashboard</a>
-                    <a href="#" onclick="logout()">Cerrar Sesión</a>
+                    <a href="#" onclick="logout()">Sign Out</a>
                     <a href="/admin/">Admin</a>
                 `;
             }

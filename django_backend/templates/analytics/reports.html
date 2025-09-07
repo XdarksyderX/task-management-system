@@ -276,36 +276,36 @@
             
             <form id="report-form">
                 <div class="form-group">
-                    <label for="report-type">Tipo de Reporte:</label>
+                    <label for="report-type">Report Type:</label>
                     <select id="report-type">
-                        <option value="">Selecciona un tipo</option>
-                        <option value="done_last_30d">Tareas Completadas (Últimos 30 días)</option>
-                        <option value="all_tasks">Todas las Tareas</option>
+                        <option value="">Select a type</option>
+                        <option value="done_last_30d">Completed Tasks (Last 30 days)</option>
+                        <option value="all_tasks">All Tasks</option>
                     </select>
                 </div>
                 
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">Generate Report</button>
-                    <button type="button" class="btn btn-secondary" onclick="refreshJobs()">Actualizar Lista</button>
+                    <button type="button" class="btn btn-secondary" onclick="refreshJobs()">Refresh List</button>
                 </div>
             </form>
         </div>
 
         <!-- Jobs List -->
         <div class="jobs-section">
-            <h3 style="margin-bottom: 1rem; color: #333;">Trabajos de Reporte</h3>
+            <h3 style="margin-bottom: 1rem; color: #333;">Report Jobs</h3>
             
             <div id="jobs-loading" class="loading" style="display: none;">
-                <p>Cargando trabajos...</p>
+                <p>Loading jobs...</p>
             </div>
             
             <div id="jobs-error" class="error" style="display: none;">
-                <p>Error al cargar los trabajos. Por favor, intenta de nuevo.</p>
+                <p>Error loading jobs. Please try again.</p>
             </div>
             
             <div id="jobs-list" class="jobs-list">
                 <div class="no-jobs">
-                    <p>No hay trabajos de reporte en curso</p>
+                    <p>No report jobs in progress</p>
                 </div>
             </div>
         </div>
@@ -319,7 +319,7 @@
             const reportType = document.getElementById('report-type').value;
             
             if (!reportType) {
-                showMessage('Por favor selecciona un tipo de reporte', 'error');
+                showMessage('Please select a report type', 'error');
                 return;
             }
 
@@ -342,7 +342,7 @@
                 }
 
                 const data = await response.json();
-                showMessage(`Reporte en cola. Job ID: ${data.job_id}`, 'success');
+                showMessage(`Report queued. Job ID: ${data.job_id}`, 'success');
                 
                 // Refresh jobs list after generating report
                 setTimeout(() => {
@@ -402,7 +402,7 @@
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
                 
-                showMessage('Reporte descargado exitosamente', 'success');
+                showMessage('Report downloaded successfully', 'success');
             } catch (error) {
                 console.error('Error:', error);
                 showMessage('Error downloading report', 'error');
@@ -422,7 +422,7 @@
             const jobsList = document.getElementById('jobs-list');
             
             if (currentJobs.length === 0) {
-                jobsList.innerHTML = '<div class="no-jobs"><p>No hay trabajos de reporte en curso</p></div>';
+                jobsList.innerHTML = '<div class="no-jobs"><p>No report jobs in progress</p></div>';
                 return;
             }
 
@@ -435,7 +435,7 @@
                 let timeInfo = '';
                 if (job.created_at) {
                     const createdAt = new Date(job.created_at);
-                    timeInfo = `Creado: ${createdAt.toLocaleString()}`;
+                    timeInfo = `Created: ${createdAt.toLocaleString()}`;
                 }
                 
                 // Show error info for failed jobs
@@ -452,19 +452,19 @@
                             <div class="job-id">Job ID: ${job.job_id}</div>
                             <span class="job-status ${statusClass}">${job.status}</span>
                             ${job.result ? `<div style="margin-top: 0.5rem; font-size: 0.9rem; color: #666;">
-                                ${job.result.count ? `${job.result.count} registros` : ''}
-                                ${job.result.query ? `- Tipo: ${job.result.query}` : ''}
+                                ${job.result.count ? `${job.result.count} records` : ''}
+                                ${job.result.query ? `- Type: ${job.result.query}` : ''}
                             </div>` : ''}
                             ${timeInfo ? `<div style="margin-top: 0.25rem; font-size: 0.8rem; color: #888;">${timeInfo}</div>` : ''}
                             ${errorInfo}
                         </div>
                         <div class="job-actions">
                             <button class="btn btn-secondary btn-small" onclick="refreshJobStatus('${job.job_id}')">
-                                Actualizar
+                                Refresh
                             </button>
                             ${canDownload ? `
                                 <button class="btn btn-success btn-small" onclick="downloadReport('${job.result.report_id}')">
-                                    Descargar
+                                    Download
                                 </button>
                             ` : ''}
                         </div>

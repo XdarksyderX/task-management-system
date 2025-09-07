@@ -308,7 +308,7 @@
             const userId = parseInt(userIdInput.value);
             
             if (!userId || userId < 1) {
-                alert('Por favor ingresa un ID de usuario válido');
+                alert('Please enter a valid user ID');
                 return;
             }
 
@@ -331,7 +331,7 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Error al cargar estadísticas del usuario');
+                    throw new Error('Error loading user statistics');
                 }
 
                 const data = await response.json();
@@ -384,7 +384,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Tareas Completadas',
+                        label: 'Completed Tasks',
                         data: counts,
                         borderColor: '#667eea',
                         backgroundColor: 'rgba(102, 126, 234, 0.1)',

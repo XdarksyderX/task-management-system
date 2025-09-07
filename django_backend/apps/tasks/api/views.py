@@ -45,7 +45,7 @@ class TaskViewSet(viewsets.ModelViewSet):
         return scoped_tasks(self.request)
 
     def perform_create(self, serializer):
-        task = serializer.save(created_by=self.request.user)
+        task = serializer.save()
         TaskHistory.objects.create(task=task, user=self.request.user, action=TaskAction.CREATED)
         transaction.on_commit(lambda: send_task_notification.delay(task.id, "created"))
 
