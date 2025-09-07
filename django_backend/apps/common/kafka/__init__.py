@@ -1,3 +1,3 @@
-from .config import KafkaConnection 
+from .config import KafkaConnection
 
-__all__ =['KafkaConnection']
+__all__ = ["KafkaConnection"]

@@ -1,9 +1,8 @@
-
 """
 Tests for the common application.
 
 This module contains tests for:
-- RSA JWT authentication  
+- RSA JWT authentication
 - JWKS endpoints
 - Token management
 - Authentication utilities

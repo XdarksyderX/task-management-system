@@ -1,1 +1,1 @@
-from .base import EventPublisher ,EventPayload 
+from .base import EventPublisher, EventPayload
