@@ -1,205 +1,282 @@
 # Task Management System
 
-Task management system with Django, WebSockets, and RSA JWT authentication.
+A full-stack, containerized task management platform built with **Django**, **PostgreSQL**, **Redis**, **Celery**, and **Docker**, including a basic server-rendered frontend and real-time features.
 
-## Initial Setup
+This project was developed as part of a technical assessment. It implements the **mandatory Part A requirements** and several **Part B features** such as Kafka event streaming, a Flask-based analytics microservice, and real-time task comments via WebSockets.
 
-### 1. Environment Variables
+---
 
-Create a `.env` file in the project root with the following variables:
+## 🚀 Features Implemented
 
-```env
-# --- Django ---
-DJANGO_SECRET_KEY=changeme-super-secret
-DJANGO_DEBUG=1
-DJANGO_ALLOWED_HOSTS=*
+### Core (Part A - Mandatory)
+- **Dockerized infrastructure** with `docker-compose` for all services:
+  - PostgreSQL 15+
+  - Redis 7+ (cache + Celery broker)
+  - Django application server
+  - Celery worker
+  - Celery beat (scheduled tasks)
+  - Flower (Celery monitoring)
+- **User authentication & management**:
+  - JWT authentication (RS256 with JWKS endpoint)
+  - Login / logout / refresh token
+  - User profile & user list (paginated)
+- **Task management**:
+  - CRUD operations for tasks
+  - Soft delete (archive/unarchive tasks)
+  - Filtering by status & priority
+  - Task assignment to multiple users
+  - Tags system for tasks
+  - Task history tracking (status changes, comments, overdue updates)
+- **Comments system** (linked to tasks)
+- **Celery background tasks**:
+  - Email notifications on task events
+  - Daily task summary per user
+  - Automatic overdue task detection and status update
+  - Weekly cleanup of archived tasks > 30 days
+- **Server-side rendered frontend** with Django templates:
+  - Login page
+  - Task list page
+  - Task creation form
+  - Task detail view with comments
+- **PostgreSQL optimizations**:
+  - `JSONField` for flexible metadata
+  - DB indexes on frequently queried fields
+  - Unique constraints on relations
+  - Model validations & signals
 
-# --- Database ---
-POSTGRES_DB=tasks
-POSTGRES_USER=tasks_user
-POSTGRES_PASSWORD=tasks_pass
-POSTGRES_HOST=db
-POSTGRES_PORT=5432
+### Extended (Part B - Extra)
+- **Kafka event streaming**:
+  - Topics: `task-events`, `user-activities`, `system-notifications`, `analytics-events`
+  - Event producers for task lifecycle & user activity
+  - Event consumers for search indexing, notifications, and analytics
+- **Flask analytics microservice**:
+  - Basic endpoints for dashboard, user/team stats, and task distribution
+  - Separate Docker container
+  - Connected to PostgreSQL & Redis
+- **Real-time comments** with Django Channels & WebSockets:
+  - Live updates on new/edit/delete comments in the task detail page
 
+---
 
-# --- Redis ---
-REDIS_HOST=redis
-REDIS_PORT=6379
+## 🛠 Tech Stack
 
-# --- Django Admin
-DJANGO_SUPERUSER_USERNAME=admin
-DJANGO_SUPERUSER_EMAIL=admin@example.com
-DJANGO_SUPERUSER_PASSWORD=admin123
+**Backend**
+- **Django 5** with **Django REST Framework** for API development.
+- **Django Channels** for WebSocket-based real-time features (task comments, live updates).
 
-# --- Celery ---
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/1
-CELERY_QUEUES=default
-CELERY_CONCURRENCY=2
-CELERY_PREFETCH=1
-CELERY_WORKER_NAME=tms-worker@%h
-FLOWER_BASIC_AUTH=admin:admin123
+**Frontend**
+- Server-Side Rendering (SSR) with Django Templates.
+- Minimal **vanilla JavaScript** for dynamic interactions.
 
+**Database & Storage**
+- **PostgreSQL 15** as the primary relational database.
+- **JSONField** usage for flexible metadata storage.
 
-# JWT Configuration
-JWT_ISSUER=http://web:8000/
-JWT_JWKS_URL=http://web:8000/.well-known/jwks.json
+**Caching & Message Broker**
+- **Redis 7** for caching, Celery message broker, and analytics queue storage.
 
-# Analytics
-ANALYTICS_REDIS_URL=redis://redis:6379/2
-ANALYTICS_DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-REPORTS_DIR=/reports
-EVENT_MEMORY_MAX_EVENTS=1000
-EVENT_ENABLE_LOGGING=true
-EVENT_FAIL_SILENTLY=true
-FLASK_ENV=development
-DEBUG=true
+**Asynchronous & Scheduled Tasks**
+- **Celery** for background job processing.
+- **Celery Beat** for periodic task scheduling.
+- **Flower** for Celery monitoring and task tracking.
 
-# Analytics Kafka Configuration (when EVENT_PUBLISHER_TYPE=kafka)
-ANALYTICS_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-ANALYTICS_KAFKA_CLIENT_ID=flask_analytics
-ANALYTICS_KAFKA_ACKS=1
-ANALYTICS_KAFKA_RETRIES=3
-ANALYTICS_KAFKA_MAX_BLOCK_MS=60000
+**Event Streaming & Processing**
+- **Apache Kafka** with **Zookeeper** for event-driven architecture.
+- Multiple Kafka consumers for:
+  - Activity feed generation
+  - Search indexing
+  - Audit logging
+  - Notifications
+  - Analytics data aggregation
 
-#Kafka
-EVENT_PUBLISHER_TYPE=kafka
-KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-KAFKA_ENABLED=1
+**Analytics Service**
+- Separate **Flask** microservice for analytics and reporting.
+- Integrated with Kafka, PostgreSQL, and Redis.
 
-#Consumers
-PG_DSN=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+**Containerization & Orchestration**
+- **Docker** multi-container setup with **Docker Compose**.
+- Health checks and dependency management for all services.
+- Volume persistence for database, Kafka, and other stateful services.
+
+**Monitoring & Tooling**
+- **Flower** (Celery task monitoring).
+- **Kafka UI (Kafbat)** for Kafka cluster inspection.
+
+---
+
+## 📂 Project Structure
+
 ```
+.
+├── DECISIONS.md
+├── docker-compose.yml
+├── README.md
+├── django_backend
+│   ├── apps
+│   │   ├── common
+│   │   ├── tasks
+│   │   └── users
+│   ├── config
+│   │   ├── asgi.py
+│   │   ├── celery.py
+│   │   ├── keys
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── Dockerfile
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── scripts
+│   │   ├── entrypoint.sh
+│   │   ├── keygen.sh
+│   │   ├── run_tests.sh
+│   │   └── seed.sh
+│   └── templates
+│       ├── analytics
+│       ├── dashboard.html
+│       └── landing.html
+├── docs
+│   ├── API_DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   └── ASYNC.md
+├── flask_analytics
+│   ├── app.py
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   ├── events
+│   │   ├── analytics_events.py
+│   │   ├── base.py
+│   │   ├── kafka_publisher.py
+│   │   ├── memory_publisher.py
+│   │   └── redis_publisher.py
+│   ├── init_db.py
+│   ├── jwt_auth.py
+│   ├── KAFKA_DEBUG_REPORT.md
+│   ├── requirements.txt
+│   ├── tasks.py
+│   ├── test_events.py
+│   ├── test_events_simple.py
+│   ├── test_kafka_debug.py
+│   └── tests.py
+├── kafka
+│   ├── consumers.py
+│   ├── Dockerfile
+│   └── requirements.txt
 
-### 2. Generate RSA Keys for JWT
+````
 
-**IMPORTANT**: Before running Docker Compose, you must generate the RSA keys for JWT authentication:
+---
+
+## ⚙️ Setup Instructions
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/XdarksyderX/task-management-system
+cd task-management-system
+````
+
+### 2. Environment variables
+
+Copy the sample environment file and update values as needed:
 
 ```bash
-# From the project root
-cd django_backend
-./scripts/keygen.sh
+cp .env.sample .env
 ```
 
-This command will create the files:
-- `config/keys/jwt_private_key.pem` - Private key for signing tokens
-- `config/keys/jwt_public_key.pem` - Public key for verifying tokens
+**Required variables include**:
 
-**Note**: RSA keys are critical for security. Ensure:
-- Do not upload them to the repository (they are in `.gitignore`)
-- Generate new keys for each environment (development, production)
-- Keep the private key secure
+* PostgreSQL & Redis connection details
+* Django secret key & debug mode
+* JWT private/public keys for RS256
+* Kafka broker URLs
+* Email backend configuration
 
-### 3. Run the System
+Generate RSA keys for JWT:
 
 ```bash
-# Build and start all services
+bash django_backend/scripts/keygen.sh
+```
+
+### 3. Start the services
+
+```bash
 docker compose up --build
-
-# Or in the background
-docker compose up -d --build
 ```
 
-## Seed Data
+On first run, this will:
 
-To populate the database with sample data, run the seed command:
+* Build all images
+* Apply database migrations
+
+### 4. (Optional) Seed initial data
+
+To populate the database with sample data (users, teams, tags, sample tasks), run:
 
 ```bash
-# Run from the web container
 docker compose exec web python manage.py seed
-
-# Or using the script directly
-docker compose exec web bash scripts/seed.sh
 ```
 
-### Created Data
+### 5. Access the application
 
-The seed script creates:
-- **1 admin user**: `admin` / `admin123`
-- **25 regular users**: with random names and password `password123`
-- **12 teams**: one per department (Engineering, Product, Design, etc.)
-- **17 tags**: frontend, backend, database, api, etc.
-- **8 task templates**: Bug Fix, Feature Implementation, etc.
-- **100 tasks**: with random states, priorities, and assignments
-- **Comments**: on approximately 60% of tasks
+* Django app: [http://localhost:8000](http://localhost:8000)
+* Admin panel: [http://localhost:8000/admin/](http://localhost:8000/admin/)
+* Flower (Celery monitoring): [http://localhost:5555](http://localhost:5555)
+* Kafbat (Kafka UI for cluster inspection): [http://localhost:8080](http://localhost:8080)
 
-### Sample Users
+---
 
-After running the seed, you'll see a list of sample users like:
+## 📜 API Endpoints
+
+See [`API_DOCUMENTATION.md`](./API_DOCUMENTATION.md) for a complete list.
+
+Some key endpoints:
 
 ```
-Sample users created:
-- alicesmith0 (password123)
-- bobsmith1 (password123)
-- charliesmith2 (password123)
-- dianajohnson3 (password123)
-- evewilliams4 (password123)
+POST   /api/auth/login/
+POST   /api/auth/logout/
+GET    /api/users/me/
+GET    /api/tasks/
+POST   /api/tasks/
+POST   /api/tasks/{id}/assign/
+POST   /api/tasks/{id}/comments/
 ```
 
-All regular users use the password `password123`.
+---
 
-### Customization
+## 🧪 Running Tests
 
-You can customize the amount of data generated:
+### Quick Test Commands
 
 ```bash
-# Create 50 users and 200 tasks
-docker compose exec web python manage.py seed --users 50 --tasks 200
+# Test individual apps (recommended)
+docker compose exec web bash /app/scripts/test.sh apps.common.tests   # RSA JWT tests
+docker compose exec web bash /app/scripts/test.sh apps.users.tests    # User & auth tests  
+docker compose exec web bash /app/scripts/test.sh apps.tasks.tests    # Task management tests
+
+# Test specific modules
+docker compose exec web bash /app/scripts/test.sh apps.common.tests.test_rsa_jwt
 ```
 
-## Services
-
-The system includes the following services:
-
-- **web** (port 8000): Main Django server
-- **worker**: Celery worker for background tasks
-- **beat**: Celery scheduler for periodic tasks
-- **db**: PostgreSQL database
-- **redis**: Cache and message broker
-
-## Important Endpoints
-
-- `http://localhost:8000/` - Home page
-- `http://localhost:8000/admin/` - Admin panel
-- `http://localhost:8000/.well-known/jwks.json` - JWKS for JWT verification
-- `http://localhost:8000/api/auth/login/` - Login API
-
-## Development
-
-### Run Tests
+### Alternative Commands
 
 ```bash
-# Full tests
-docker compose exec web python manage.py test
-
-# Specific tests
-docker compose exec web python manage.py test apps.tasks.tests
-docker compose exec web python manage.py test apps.common.tests
+# Using Django's test command directly
+docker compose exec web python manage.py test apps.common.tests --settings=config.test_settings
+docker compose exec web python manage.py test apps.users.tests --settings=config.test_settings  
+docker compose exec web python manage.py test apps.tasks.tests --settings=config.test_settings
 ```
 
-### Logs
+**Note**: The test configuration uses SQLite in-memory database, HS256 JWT (instead of RSA), and memory-based event publishing for faster, isolated testing.
 
-```bash
-# View logs for all services
-docker compose logs -f
+---
 
-# View logs for a specific service
-docker compose logs -f web
-docker compose logs -f websocket
-```
+## 📚 Additional Documentation
 
-### Regenerate RSA Keys
+* **[DECISIONS.md](./DECISIONS.md)** – Implemented features, trade-offs, technical choices.
+* **[ARCHITECTURE.md](./ARCHITECTURE.md)** – System architecture and component interactions.
+* **[API\_DOCUMENTATION.md](./API_DOCUMENTATION.md)** – API reference and example requests.
+---
 
-If you need to regenerate the keys (for example, for a new environment):
+## 📄 License
 
-```bash
-cd django_backend
-rm -f config/keys/jwt_*.pem
-./scripts/keygen.sh
-```
-
-Then restart the services:
-
-```bash
-docker compose restart
-```
+This project is for demonstration purposes as part of a technical assessment.
