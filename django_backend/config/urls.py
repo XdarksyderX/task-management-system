@@ -21,20 +21,7 @@ def custom_500(request):
 def custom_403(request, exception):
     return render(request, '403.html', status=403)
 
-# Test views for error pages (remove in production)
-def test_404(request):
-    from django.http import Http404
-    raise Http404("Test 404 error")
-
-def test_500(request):
-    raise Exception("Test 500 error")
-
-def test_403(request):
-    from django.core.exceptions import PermissionDenied
-    raise PermissionDenied("Test 403 error")
-
 urlpatterns = [
-    path("admin/", admin.site.urls),
     path("", landing_page, name="landing"),
     path("dashboard/", dashboard, name="dashboard"),
     path("healthz/", healthz),
@@ -50,11 +37,6 @@ urlpatterns = [
     # JWKS endpoints for JWT public key distribution
     path(".well-known/jwks.json", jwks_endpoint, name="jwks"),
     path("api/auth/public-key/", public_key_endpoint, name="public-key"),
-
-    # Test error pages (remove in production)
-    path("test/404/", test_404, name="test_404"),
-    path("test/500/", test_500, name="test_500"),
-    path("test/403/", test_403, name="test_403"),
 
     path("auth/", include("apps.users.urls")),
     path("tasks/", include("apps.tasks.urls")),

@@ -30,6 +30,7 @@ class UserEventType(Enum):
     TEAM_MEMBER_ADDED = "team_member_added"
     TEAM_MEMBER_REMOVED = "team_member_removed"
     TEAM_MEMBER_ROLE_CHANGED = "team_member_role_changed"
+    TEAM_MEMBER_LEFT = "team_member_left"
 
 def publish_user_event(
     event_type: UserEventType,
