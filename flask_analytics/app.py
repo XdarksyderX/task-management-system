@@ -146,9 +146,9 @@ def create_app ():
         error_name =error .__class__ .__name__ 
 
 
-        if hasattr (error ,'code')and error .code <500 :
+        if hasattr (error ,'code')and int (error .code )<500 :
 
-            status_code =error .code 
+            status_code =int (error .code ) 
 
 
         logger .error ('%s Error (%s): %s %s - Remote Address: %s - Error: %s - Request Headers: %s',
@@ -473,7 +473,7 @@ def create_app ():
                 .group_by (text ("week")).order_by (text ("week DESC")).limit (12 )
                 ).mappings ().all ()
                 leadtime =s .scalar (
-                select (func .coalesce (func .avg ((Task .updated_at -Task .created_at )),0 ))
+                select (func .avg (func .extract ('epoch',Task .updated_at -Task .created_at )))
                 .where (Task .assigned_team_id ==team_id ,Task .status =="done")
                 )
 
@@ -481,7 +481,7 @@ def create_app ():
             "team_id":team_id ,
             "metrics":{"total":total ,"done":done ,"blocked":blocked },
             "throughput":serialize_row_mappings (throughput ),
-            "lead_time_hours_avg":(leadtime .total_seconds ()/3600.0 )if leadtime else 0.0 
+            "lead_time_hours_avg":float (leadtime )/3600.0 if leadtime else 0.0 
             }
 
 
