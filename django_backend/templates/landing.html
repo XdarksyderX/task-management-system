@@ -8,7 +8,12 @@
         * {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
+            box-                        <a href="/auth/register/" class="btn-hero primary">
+                            Create Account
+                        </a>
+                        <a href="/auth/login/" class="btn-hero primary">
+                            Sign In
+                        </a>: border-box;
         }
         
         body {
@@ -133,14 +138,18 @@
         }
         
         .btn-hero.secondary {
-            background: rgba(255, 255, 255, 0.2);
+            background: transparent;
             color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            backdrop-filter: blur(10px);
         }
         
         .btn-hero.secondary:hover {
-            background: rgba(255, 255, 255, 0.3);
-            border-color: rgba(255, 255, 255, 0.5);
+            background: white;
+            color: #667eea;
+            border-color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
         }
 
         /* Features Section */
@@ -302,22 +311,6 @@
                         <h3>Progress Tracking</h3>
                         <p>Monitor your progress with dashboards and analytics to stay productive.</p>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- CTA Section -->
-        <section class="cta">
-            <div class="container">
-                <h2>Ready to Get Organized?</h2>
-                <p>Start managing your tasks more effectively today.</p>
-                <div class="hero-buttons">
-                    <a href="/auth/register/" class="btn-hero primary">
-                        Create Account
-                    </a>
-                    <a href="/auth/login/" class="btn-hero secondary">
-                        Sign In
-                    </a>
                 </div>
             </div>
         </section>
