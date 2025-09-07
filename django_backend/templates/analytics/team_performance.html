@@ -321,7 +321,7 @@
             <div class="metrics-grid">
                 <div class="metric-card">
                     <div class="metric-number" id="total-tasks">-</div>
-                    <div class="metric-label">Total de Tareas</div>
+                    <div class="metric-label">Total Tasks</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-number" id="done-tasks">-</div>
@@ -329,11 +329,11 @@
                 </div>
                 <div class="metric-card">
                     <div class="metric-number" id="blocked-tasks">-</div>
-                    <div class="metric-label">Tareas Bloqueadas</div>
+                    <div class="metric-label">Blocked Tasks</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-number" id="completion-rate">-</div>
-                    <div class="metric-label">% Completado</div>
+                    <div class="metric-label">% Completed</div>
                 </div>
             </div>
 
@@ -345,21 +345,21 @@
                 </div>
                 
                 <div class="kpi-container">
-                    <h3 class="chart-title">KPIs del Equipo</h3>
+                    <h3 class="chart-title">Team KPIs</h3>
                     
                     <div class="kpi-item">
                         <div class="kpi-value" id="lead-time">-</div>
-                        <div class="kpi-label">Lead Time Promedio (horas)</div>
+                        <div class="kpi-label">Average Lead Time (hours)</div>
                     </div>
                     
                     <div class="kpi-item">
                         <div class="kpi-value" id="weekly-avg">-</div>
-                        <div class="kpi-label">Promedio Semanal</div>
+                        <div class="kpi-label">Weekly Average</div>
                     </div>
                     
                     <div class="kpi-item">
                         <div class="kpi-value" id="trend-indicator">-</div>
-                        <div class="kpi-label">Tendencia</div>
+                        <div class="kpi-label">Trend</div>
                     </div>
                 </div>
             </div>
@@ -476,7 +476,7 @@
 
             const labels = throughputData.map(item => {
                 const date = new Date(item.week);
-                return `Sem ${date.getDate()}/${date.getMonth() + 1}`;
+                return `Week ${date.getDate()}/${date.getMonth() + 1}`;
             }).reverse();
             
             const counts = throughputData.map(item => item.done).reverse();
@@ -525,7 +525,7 @@
                             borderWidth: 1,
                             callbacks: {
                                 label: function(context) {
-                                    return `Completadas: ${context.parsed.y}`;
+                                    return `Completed: ${context.parsed.y}`;
                                 }
                             }
                         }
