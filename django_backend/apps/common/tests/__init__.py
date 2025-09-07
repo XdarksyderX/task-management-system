@@ -1,4 +1,4 @@
-# Common app tests module
+
 """
 Tests for the common application.
 
