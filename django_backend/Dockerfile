@@ -40,7 +40,7 @@ ENV CELERY_BEAT_DIR=/app/celery_beat_data
 RUN mkdir -p "$CELERY_BEAT_DIR" && \
 	mkdir -p /app/config/keys && \
 	chmod +x /app/scripts/entrypoint.sh && \
-	chmod +x /app/scripts/run_tests.sh && \
+	chmod +x /app/scripts/test.sh && \
 	chmod +x /app/scripts/keygen.sh
 
 EXPOSE 8000
