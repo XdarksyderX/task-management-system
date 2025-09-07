@@ -212,7 +212,7 @@ def tag_list(request):
         else:
             messages.error(request, 'Tag name is required.')
         
-        return redirect('tag_list')
+        return redirect('tasks:tag_list')
     
     context = {
         'tags': tags,
@@ -299,7 +299,7 @@ def template_create(request):
             )
             
             messages.success(request, 'Template created successfully!')
-            return redirect('template_list')
+            return redirect('tasks:template_list')
         else:
             messages.error(request, 'Template name is required.')
     

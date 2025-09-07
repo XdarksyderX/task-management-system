@@ -1,8 +1,9 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, HttpResponse
 from django.db import models
+from django.conf import settings
 from apps.users.models import Team
 from django.core.paginator import Paginator
 
@@ -12,7 +13,8 @@ from .producer import (
     publish_team_member_left,
     publish_team_member_added,
     publish_team_member_removed,
-    publish_team_updated
+    publish_team_updated,
+    publish_user_logout
 )
 
 
@@ -21,6 +23,20 @@ def login_page(request):
 
 def register_page(request):
     return render(request, "auth/register.html")
+
+
+def logout_view(request):
+    """Web logout view that clears JWT cookies and redirects to login"""
+    # Publish logout event if user is authenticated
+    if request.user and request.user.is_authenticated:
+        publish_user_logout(request.user.id, request.user.username)
+    
+    # Create response and clear JWT cookies
+    response = redirect('users:login')
+    response.delete_cookie(getattr(settings, 'AUTH_COOKIE_ACCESS', 'access_token'))
+    response.delete_cookie(getattr(settings, 'AUTH_COOKIE_REFRESH', 'refresh_token'))
+    
+    return response
 
 
 # ==================== TEAM VIEWS ====================
