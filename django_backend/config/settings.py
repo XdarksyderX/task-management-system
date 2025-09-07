@@ -111,6 +111,7 @@ CELERY_TIMEZONE = TIME_ZONE
 
 from datetime import timedelta
 
+LOGIN_URL="/auth/login/"
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/auth/login/"
 

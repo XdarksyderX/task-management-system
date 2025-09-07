@@ -280,18 +280,51 @@
         }
 
         function createPriorityChart(priorityData) {
+            console.log('Priority data received:', priorityData); // Debug log
+            
             const ctx = document.getElementById('priority-chart').getContext('2d');
             
             if (priorityChart) {
                 priorityChart.destroy();
             }
 
-            const labels = priorityData.map(item => 
-                item.priority === 1 ? 'Low' :
-                item.priority === 2 ? 'Medium' :
-                item.priority === 3 ? 'High' : 'Critical'
-            );
+            // Define color mapping for each priority
+            const priorityColors = {
+                'low': '#36A2EB',      // Blue
+                'medium': '#FFCE56',   // Yellow
+                'high': '#FF6384',     // Red
+                'urgent': '#FF9F40',   // Orange
+                'critical': '#8B5CF6'  // Purple
+            };
+
+            const labels = priorityData.map(item => {
+                const priority = item.priority ? item.priority.toString().toLowerCase().trim() : 'unknown';
+                console.log('Raw priority:', item.priority, 'Processed priority:', priority); // Debug log
+                
+                switch(priority) {
+                    case 'low': return 'Low';
+                    case 'medium': return 'Medium';
+                    case 'high': return 'High';
+                    case 'urgent': return 'Urgent';
+                    case 'critical': return 'Critical';
+                    default: 
+                        console.warn('Unknown priority:', priority);
+                        return priority.charAt(0).toUpperCase() + priority.slice(1); // Capitalize first letter
+                }
+            });
+            
             const counts = priorityData.map(item => item.c);
+            
+            // Get colors based on actual priority values
+            const colors = priorityData.map(item => {
+                const priority = item.priority ? item.priority.toString().toLowerCase().trim() : 'unknown';
+                const color = priorityColors[priority] || '#9CA3AF'; // Default gray for unknown
+                console.log('Priority:', priority, 'Color:', color); // Debug log
+                return color;
+            });
+
+            console.log('Chart labels:', labels); // Debug log
+            console.log('Chart colors:', colors); // Debug log
 
             priorityChart = new Chart(ctx, {
                 type: 'doughnut',
@@ -299,12 +332,7 @@
                     labels: labels,
                     datasets: [{
                         data: counts,
-                        backgroundColor: [
-                            '#36A2EB',
-                            '#FFCE56',
-                            '#FF6384',
-                            '#FF9F40'
-                        ],
+                        backgroundColor: colors,
                         borderWidth: 2,
                         borderColor: '#fff'
                     }]

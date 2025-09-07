@@ -74,7 +74,9 @@ case "${1:-web}" in
     daphne -b 0.0.0.0 -p 8000 config.asgi:application
     ;;
   worker)
-    celery -A config worker -l info
+    celery -A config worker -l info -E --hostname ${CELERY_WORKER_NAME:-tms-worker@%h} \
+      -Q ${CELERY_QUEUES:-default} --concurrency ${CELERY_CONCURRENCY:-2} \
+      --prefetch-multiplier ${CELERY_PREFETCH:-1}
     ;;
   beat)
     celery -A config beat -l info --schedule "$CELERY_BEAT_DIR/celerybeat-schedule"
@@ -82,7 +84,6 @@ case "${1:-web}" in
   test)
     export DJANGO_SETTINGS_MODULE=config.test_settings
     export DATABASE_URL=sqlite:///test.db
-    echo "Running tests..."
     scripts/run_tests.sh "${2:-all}"
     ;;
   *)

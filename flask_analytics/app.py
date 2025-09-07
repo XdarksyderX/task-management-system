@@ -2,6 +2,7 @@ import os
 import json
 import logging
 import uuid
+import time
 from pathlib import Path
 from flask import Flask, request, jsonify, send_file, abort, g
 from flask_cors import CORS
@@ -10,6 +11,7 @@ from redis import Redis
 from rq import Queue
 from init_db import init_db
 from jwt_auth import jwt_required
+from events import analytics_events
 
 def create_app():
     app = Flask(__name__)
@@ -210,8 +212,19 @@ def create_app():
     @app.get("/api/v1/analytics/dashboard")
     @jwt_required
     def dashboard():
+        start_time = time.time()
         try:
             logger.info(f"Dashboard request for user_id: {g.user_id}, is_staff: {g.is_staff}")
+            
+            # Publish dashboard viewed event
+            analytics_events.publish_dashboard_viewed(
+                user_id=g.user_id,
+                metadata={
+                    "is_staff": g.is_staff,
+                    "user_agent": request.headers.get('User-Agent'),
+                    "ip_address": request.remote_addr
+                }
+            )
             
             with Session() as s:
                 total = s.scalar(select(func.count()).select_from(Task).where(Task.is_archived == False))
@@ -247,108 +260,259 @@ def create_app():
                 "last30_done": serialize_row_mappings(last30_done)
             }
             
+            # Publish analytics query event
+            execution_time = (time.time() - start_time) * 1000
+            analytics_events.publish_analytics_query(
+                user_id=g.user_id,
+                endpoint="/api/v1/analytics/dashboard",
+                query_type="dashboard_summary",
+                execution_time_ms=execution_time,
+                metadata={
+                    "total_tasks": total,
+                    "query_complexity": "medium"
+                }
+            )
+            
             logger.info("Dashboard response prepared successfully")
             return jsonify(result)
             
         except Exception as e:
+            # Publish error event
+            analytics_events.publish_error_occurred(
+                user_id=g.user_id,
+                error_type=type(e).__name__,
+                endpoint="/api/v1/analytics/dashboard",
+                error_message=str(e),
+                metadata={
+                    "is_staff": g.is_staff,
+                    "execution_time_ms": (time.time() - start_time) * 1000
+                }
+            )
             logger.error(f"Dashboard error: {type(e).__name__}: {str(e)}", exc_info=True)
             raise
 
     @app.get("/api/v1/analytics/tasks/distribution")
     @jwt_required
     def tasks_distribution():
-        with Session() as s:
-            by_status = s.execute(
-                select(Task.status, func.count().label("c"))
-                .where(Task.is_archived == False)
-                .group_by(Task.status).order_by(Task.status)
-            ).mappings().all()
+        start_time = time.time()
+        try:
+            # Publish task distribution viewed event
+            analytics_events.publish_task_distribution_viewed(
+                user_id=g.user_id,
+                metadata={
+                    "is_staff": g.is_staff,
+                    "user_agent": request.headers.get('User-Agent'),
+                    "ip_address": request.remote_addr
+                }
+            )
+            
+            with Session() as s:
+                by_status = s.execute(
+                    select(Task.status, func.count().label("c"))
+                    .where(Task.is_archived == False)
+                    .group_by(Task.status).order_by(Task.status)
+                ).mappings().all()
 
-            top_tags = s.execute(
-                select(Tag.name.label("tag"), func.count().label("c"))
-                .select_from(TaskTag)
-                .join(Tag, Tag.id == TaskTag.tag_id)
-                .join(Task, Task.id == TaskTag.task_id)
-                .where(Task.is_archived == False)
-                .group_by(Tag.name).order_by(text("c DESC")).limit(20)
-            ).mappings().all()
+                top_tags = s.execute(
+                    select(Tag.name.label("tag"), func.count().label("c"))
+                    .select_from(TaskTag)
+                    .join(Tag, Tag.id == TaskTag.tag_id)
+                    .join(Task, Task.id == TaskTag.task_id)
+                    .where(Task.is_archived == False)
+                    .group_by(Tag.name).order_by(text("c DESC")).limit(20)
+                ).mappings().all()
 
-        return jsonify({"by_status": serialize_row_mappings(by_status), "top_tags": serialize_row_mappings(top_tags)})
+            result = {"by_status": serialize_row_mappings(by_status), "top_tags": serialize_row_mappings(top_tags)}
+            
+            # Publish analytics query event
+            execution_time = (time.time() - start_time) * 1000
+            analytics_events.publish_analytics_query(
+                user_id=g.user_id,
+                endpoint="/api/v1/analytics/tasks/distribution",
+                query_type="task_distribution",
+                execution_time_ms=execution_time,
+                metadata={
+                    "status_count": len(by_status),
+                    "tags_count": len(top_tags)
+                }
+            )
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            analytics_events.publish_error_occurred(
+                user_id=g.user_id,
+                error_type=type(e).__name__,
+                endpoint="/api/v1/analytics/tasks/distribution",
+                error_message=str(e),
+                metadata={
+                    "execution_time_ms": (time.time() - start_time) * 1000
+                }
+            )
+            logger.error(f"Tasks distribution error: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
 
     @app.get("/api/v1/analytics/user/<int:user_id>/stats")
     @jwt_required
     def user_stats(user_id: int):
-        with Session() as s:
-            created = s.scalar(select(func.count()).select_from(Task).where(Task.created_by_id == user_id))
-            assigned = s.scalar(select(func.count()).select_from(TaskAssignment).where(TaskAssignment.user_id == user_id))
-            comments = s.scalar(select(func.count()).select_from(Comment).where(Comment.author_id == user_id))
-            hours_done = s.scalar(
-                select(func.coalesce(func.sum(Task.actual_hours), 0))
-                .select_from(Task)
-                .join(TaskAssignment, TaskAssignment.task_id == Task.id)
-                .where(TaskAssignment.user_id == user_id, Task.status == "done")
+        start_time = time.time()
+        try:
+            # Publish user stats accessed event
+            analytics_events.publish_user_stats_accessed(
+                requesting_user_id=g.user_id,
+                target_user_id=user_id,
+                metadata={
+                    "is_staff": g.is_staff,
+                    "is_self": g.user_id == user_id,
+                    "user_agent": request.headers.get('User-Agent'),
+                    "ip_address": request.remote_addr
+                }
             )
-            velocity = s.execute(
-                select(cast(func.date_trunc("week", Task.updated_at), Date).label("week"),
-                       func.count().label("done"))
-                .join(TaskAssignment, TaskAssignment.task_id == Task.id)
-                .where(TaskAssignment.user_id == user_id, Task.status == "done")
-                .group_by(text("week")).order_by(text("week DESC")).limit(12)
-            ).mappings().all()
+            
+            with Session() as s:
+                created = s.scalar(select(func.count()).select_from(Task).where(Task.created_by_id == user_id))
+                assigned = s.scalar(select(func.count()).select_from(TaskAssignment).where(TaskAssignment.user_id == user_id))
+                comments = s.scalar(select(func.count()).select_from(Comment).where(Comment.author_id == user_id))
+                hours_done = s.scalar(
+                    select(func.coalesce(func.sum(Task.actual_hours), 0))
+                    .select_from(Task)
+                    .join(TaskAssignment, TaskAssignment.task_id == Task.id)
+                    .where(TaskAssignment.user_id == user_id, Task.status == "done")
+                )
+                velocity = s.execute(
+                    select(cast(func.date_trunc("week", Task.updated_at), Date).label("week"),
+                           func.count().label("done"))
+                    .join(TaskAssignment, TaskAssignment.task_id == Task.id)
+                    .where(TaskAssignment.user_id == user_id, Task.status == "done")
+                    .group_by(text("week")).order_by(text("week DESC")).limit(12)
+                ).mappings().all()
 
-        return jsonify({
-            "user_id": user_id,
-            "summary": {
-                "created": created,
-                "assigned": assigned,
-                "comments": comments,
-                "hours_done": float(hours_done or 0),
-            },
-            "velocity": serialize_row_mappings(velocity)
-        })
+            result = {
+                "user_id": user_id,
+                "summary": {
+                    "created": created,
+                    "assigned": assigned,
+                    "comments": comments,
+                    "hours_done": float(hours_done or 0),
+                },
+                "velocity": serialize_row_mappings(velocity)
+            }
+            
+            # Publish analytics query event
+            execution_time = (time.time() - start_time) * 1000
+            analytics_events.publish_analytics_query(
+                user_id=g.user_id,
+                endpoint=f"/api/v1/analytics/user/{user_id}/stats",
+                query_type="user_stats",
+                execution_time_ms=execution_time,
+                metadata={
+                    "target_user_id": user_id,
+                    "created_count": created,
+                    "assigned_count": assigned
+                }
+            )
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            analytics_events.publish_error_occurred(
+                user_id=g.user_id,
+                error_type=type(e).__name__,
+                endpoint=f"/api/v1/analytics/user/{user_id}/stats",
+                error_message=str(e),
+                metadata={
+                    "target_user_id": user_id,
+                    "execution_time_ms": (time.time() - start_time) * 1000
+                }
+            )
+            logger.error(f"User stats error: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
 
     @app.get("/api/v1/analytics/team/<int:team_id>/performance")
     @jwt_required
     def team_performance(team_id: int):
-        with Session() as s:
-            if not g.is_staff:
-                if TeamMembers is not None:
-                    is_member = s.scalar(
-                        select(func.count())
-                        .select_from(TeamMembers)
-                        .where(TeamMembers.team_id == team_id, TeamMembers.user_id == g.user_id)
-                    )
-                else:
-                    is_member = s.scalar(
-                        select(func.count())
-                        .select_from(Team)
-                        .join(User, text("1=1"))
-                        .where(text("users_team.id = :tid AND users_user.id = :uid"))
-                        .params(tid=team_id, uid=g.user_id)
-                    )
-                if not is_member:
-                    abort(403)
-
-            total = s.scalar(select(func.count()).select_from(Task).where(Task.assigned_team_id == team_id, Task.is_archived == False))
-            done = s.scalar(select(func.count()).select_from(Task).where(Task.assigned_team_id == team_id, Task.status == "done", Task.is_archived == False))
-            blocked = s.scalar(select(func.count()).select_from(Task).where(Task.assigned_team_id == team_id, Task.status == "blocked", Task.is_archived == False))
-            throughput = s.execute(
-                select(cast(func.date_trunc("week", Task.updated_at), Date).label("week"),
-                       func.count().label("done"))
-                .where(Task.assigned_team_id == team_id, Task.status == "done")
-                .group_by(text("week")).order_by(text("week DESC")).limit(12)
-            ).mappings().all()
-            leadtime = s.scalar(
-                select(func.coalesce(func.avg((Task.updated_at - Task.created_at)), 0))
-                .where(Task.assigned_team_id == team_id, Task.status == "done")
+        start_time = time.time()
+        try:
+            # Publish team performance accessed event
+            analytics_events.publish_team_performance_accessed(
+                user_id=g.user_id,
+                team_id=team_id,
+                metadata={
+                    "is_staff": g.is_staff,
+                    "user_agent": request.headers.get('User-Agent'),
+                    "ip_address": request.remote_addr
+                }
             )
+            
+            with Session() as s:
+                if not g.is_staff:
+                    if TeamMembers is not None:
+                        is_member = s.scalar(
+                            select(func.count())
+                            .select_from(TeamMembers)
+                            .where(TeamMembers.team_id == team_id, TeamMembers.user_id == g.user_id)
+                        )
+                    else:
+                        is_member = s.scalar(
+                            select(func.count())
+                            .select_from(Team)
+                            .join(User, text("1=1"))
+                            .where(text("users_team.id = :tid AND users_user.id = :uid"))
+                            .params(tid=team_id, uid=g.user_id)
+                        )
+                    if not is_member:
+                        abort(403)
 
-        return jsonify({
-            "team_id": team_id,
-            "metrics": {"total": total, "done": done, "blocked": blocked},
-            "throughput": serialize_row_mappings(throughput),
-            "lead_time_hours_avg": (leadtime.total_seconds() / 3600.0) if leadtime else 0.0
-        })
+                total = s.scalar(select(func.count()).select_from(Task).where(Task.assigned_team_id == team_id, Task.is_archived == False))
+                done = s.scalar(select(func.count()).select_from(Task).where(Task.assigned_team_id == team_id, Task.status == "done", Task.is_archived == False))
+                blocked = s.scalar(select(func.count()).select_from(Task).where(Task.assigned_team_id == team_id, Task.status == "blocked", Task.is_archived == False))
+                throughput = s.execute(
+                    select(cast(func.date_trunc("week", Task.updated_at), Date).label("week"),
+                           func.count().label("done"))
+                    .where(Task.assigned_team_id == team_id, Task.status == "done")
+                    .group_by(text("week")).order_by(text("week DESC")).limit(12)
+                ).mappings().all()
+                leadtime = s.scalar(
+                    select(func.coalesce(func.avg((Task.updated_at - Task.created_at)), 0))
+                    .where(Task.assigned_team_id == team_id, Task.status == "done")
+                )
+
+            result = {
+                "team_id": team_id,
+                "metrics": {"total": total, "done": done, "blocked": blocked},
+                "throughput": serialize_row_mappings(throughput),
+                "lead_time_hours_avg": (leadtime.total_seconds() / 3600.0) if leadtime else 0.0
+            }
+            
+            # Publish analytics query event
+            execution_time = (time.time() - start_time) * 1000
+            analytics_events.publish_analytics_query(
+                user_id=g.user_id,
+                endpoint=f"/api/v1/analytics/team/{team_id}/performance",
+                query_type="team_performance",
+                execution_time_ms=execution_time,
+                metadata={
+                    "team_id": team_id,
+                    "total_tasks": total,
+                    "done_tasks": done
+                }
+            )
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            analytics_events.publish_error_occurred(
+                user_id=g.user_id,
+                error_type=type(e).__name__,
+                endpoint=f"/api/v1/analytics/team/{team_id}/performance",
+                error_message=str(e),
+                metadata={
+                    "team_id": team_id,
+                    "execution_time_ms": (time.time() - start_time) * 1000
+                }
+            )
+            logger.error(f"Team performance error: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
 
     # -------- Reports (RQ) --------
     @app.route("/api/v1/reports/generate", methods=["POST", "OPTIONS"])
@@ -359,43 +523,77 @@ def create_app():
         
         # Apply JWT authentication only for POST requests
         if request.method == "POST":
-            # Manually implement JWT verification logic
-            auth_header = request.headers.get("Authorization")
-            if not auth_header or not auth_header.startswith("Bearer "):
-                return jsonify({
-                    "error": "Unauthorized",
-                    "message": "Authentication is required to access this resource. Please provide a valid JWT token.",
-                    "status_code": 401,
-                    "hint": "Include 'Authorization: Bearer <token>' header in your request"
-                }), 401
-            
+            start_time = time.time()
             try:
-                token = auth_header.split(" ")[1]
-                # Use the same decoding logic as in jwt_auth.py
-                from jwt_auth import _decode_rs256
-                claims = _decode_rs256(token)
+                # Manually implement JWT verification logic
+                auth_header = request.headers.get("Authorization")
+                if not auth_header or not auth_header.startswith("Bearer "):
+                    return jsonify({
+                        "error": "Unauthorized",
+                        "message": "Authentication is required to access this resource. Please provide a valid JWT token.",
+                        "status_code": 401,
+                        "hint": "Include 'Authorization: Bearer <token>' header in your request"
+                    }), 401
                 
-                g.user_id = claims.get("user_id") or claims.get("sub")
-                g.is_staff = bool(claims.get("is_staff") or claims.get("staff", False))
-                g.scopes = claims.get("scope") or claims.get("scopes") or []
-                
-                if not g.user_id:
-                    raise Exception("No user_id in token")
+                try:
+                    token = auth_header.split(" ")[1]
+                    # Use the same decoding logic as in jwt_auth.py
+                    from jwt_auth import _decode_rs256
+                    claims = _decode_rs256(token)
                     
+                    g.user_id = claims.get("user_id") or claims.get("sub")
+                    g.is_staff = bool(claims.get("is_staff") or claims.get("staff", False))
+                    g.scopes = claims.get("scope") or claims.get("scopes") or []
+                    
+                    if not g.user_id:
+                        raise Exception("No user_id in token")
+                        
+                except Exception as e:
+                    logger.error(f"JWT verification failed: {str(e)}")
+                    return jsonify({
+                        "error": "Unauthorized",
+                        "message": "Invalid or expired JWT token.",
+                        "status_code": 401
+                    }), 401
+                
+                data = request.get_json(silent=True) or {}
+                report_type = data.get('type', 'unknown')
+                
+                # Add user_id to the job metadata for filtering
+                data['user_id'] = g.user_id
+                job_id = f"report_{g.user_id}_{uuid.uuid4()}"
+                job = q.enqueue("tasks.report_job", json.dumps(data), db_url, reports_dir, 
+                               job_timeout=600, job_id=job_id)
+                
+                # Publish report generation event
+                analytics_events.publish_report_generated(
+                    user_id=g.user_id,
+                    report_type=report_type,
+                    job_id=job.id,
+                    metadata={
+                        "is_staff": g.is_staff,
+                        "request_data": data,
+                        "user_agent": request.headers.get('User-Agent'),
+                        "ip_address": request.remote_addr,
+                        "generation_time_ms": (time.time() - start_time) * 1000
+                    }
+                )
+                
+                return jsonify({"job_id": job.id}), 202
+                
             except Exception as e:
-                logger.error(f"JWT verification failed: {str(e)}")
-                return jsonify({
-                    "error": "Unauthorized",
-                    "message": "Invalid or expired JWT token.",
-                    "status_code": 401
-                }), 401
-            
-            data = request.get_json(silent=True) or {}
-            # Add user_id to the job metadata for filtering
-            data['user_id'] = g.user_id
-            job = q.enqueue("tasks.report_job", json.dumps(data), db_url, reports_dir, 
-                           job_timeout=600, job_id=f"report_{g.user_id}_{uuid.uuid4()}")
-            return jsonify({"job_id": job.id}), 202
+                # Publish error event
+                analytics_events.publish_error_occurred(
+                    user_id=getattr(g, 'user_id', None),
+                    error_type=type(e).__name__,
+                    endpoint="/api/v1/reports/generate",
+                    error_message=str(e),
+                    metadata={
+                        "execution_time_ms": (time.time() - start_time) * 1000
+                    }
+                )
+                logger.error(f"Report generation error: {type(e).__name__}: {str(e)}", exc_info=True)
+                raise
 
     @app.get("/api/v1/reports")
     @jwt_required
@@ -511,12 +709,42 @@ def create_app():
     @app.get("/api/v1/reports/<report_id>/download")
     @jwt_required
     def reports_download(report_id):
-        # Additional security: verify that the report file exists and belongs to user
-        # For now, we'll allow download if file exists, but in production you might want
-        # to add user ownership verification to the filename or database
-        path = os.path.join(reports_dir, f"{report_id}.csv")
-        if not os.path.exists(path):
-            abort(404)
-        return send_file(path, mimetype="text/csv", as_attachment=True, download_name=f"report_{report_id}.csv")
+        start_time = time.time()
+        try:
+            # Additional security: verify that the report file exists and belongs to user
+            # For now, we'll allow download if file exists, but in production you might want
+            # to add user ownership verification to the filename or database
+            path = os.path.join(reports_dir, f"{report_id}.csv")
+            if not os.path.exists(path):
+                abort(404)
+            
+            # Publish report download event
+            analytics_events.publish_report_downloaded(
+                user_id=g.user_id,
+                report_id=report_id,
+                metadata={
+                    "is_staff": g.is_staff,
+                    "file_path": path,
+                    "user_agent": request.headers.get('User-Agent'),
+                    "ip_address": request.remote_addr,
+                    "processing_time_ms": (time.time() - start_time) * 1000
+                }
+            )
+            
+            return send_file(path, mimetype="text/csv", as_attachment=True, download_name=f"report_{report_id}.csv")
+            
+        except Exception as e:
+            analytics_events.publish_error_occurred(
+                user_id=g.user_id,
+                error_type=type(e).__name__,
+                endpoint=f"/api/v1/reports/{report_id}/download",
+                error_message=str(e),
+                metadata={
+                    "report_id": report_id,
+                    "execution_time_ms": (time.time() - start_time) * 1000
+                }
+            )
+            logger.error(f"Report download error: {type(e).__name__}: {str(e)}", exc_info=True)
+            raise
 
     return app

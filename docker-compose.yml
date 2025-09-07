@@ -42,6 +42,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     volumes:
       - ./django_backend:/app
     healthcheck:
@@ -95,9 +97,14 @@ services:
     volumes:
       - reports_data:/reports
     depends_on:
-      - web 
-      - db
-      - redis
+      web: 
+        condition: service_healthy
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
   rq-worker-analytics:
     build:
@@ -157,6 +164,48 @@ services:
       timeout: 5s
       retries: 12
 
+  kafbat:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: kafbat
+    restart: unless-stopped
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health | grep -q '\"status\":\"UP\"'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  flower:
+    image: mher/flower:2.0.1
+    container_name: tms_flower
+    restart: unless-stopped
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/1
+      FLOWER_PORT: 5555
+      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:-admin:admin}
+    ports:
+      - "5555:5555"
+    depends_on:
+      redis:
+        condition: service_healthy
+      worker:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python - <<'PY'\nimport urllib.request; urllib.request.urlopen('http://localhost:5555/'); print('OK')\nPY"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   kafka-init:
     image: confluentinc/cp-kafka:7.6.1
     container_name: kafka-init
@@ -175,18 +224,109 @@ services:
       for t in "$${TLIST[@]}"; do
         echo "Creating topic $$t ...";
         kafka-topics --bootstrap-server "$$BOOTSTRAP" \
-                     --create --if-not-exists \
-                     --topic "$$t" \
-                     --partitions "$$PARTITIONS" \
-                     --replication-factor "$$REPLICATION";
+                      --create --if-not-exists \
+                      --topic "$$t" \
+                      --partitions "$$PARTITIONS" \
+                      --replication-factor "$$REPLICATION";
       done;
       echo "Existing topics:";
       kafka-topics --bootstrap-server "$$BOOTSTRAP" --list;
       '
     restart: "no"
 
+  consumer-activity-feed:
+    build: ./kafka
+    container_name: consumer-activity-feed
+    env_file: [.env]
+    environment:
+      ROLE: activity-feed
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPICS: user-activities,task-events
+      KAFKA_GROUP_ID: tms-activity
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      PG_DSN: ${PG_DSN}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  consumer-search-index:
+    build: ./kafka
+    container_name: consumer-search-index
+    env_file: [.env]
+    environment:
+      ROLE: search-index
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPICS: task-events
+      KAFKA_GROUP_ID: tms-search
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      PG_DSN: ${PG_DSN}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  consumer-audit:
+    build: ./kafka
+    container_name: consumer-audit
+    env_file: [.env]
+    environment:
+      ROLE: audit
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPICS: user-activities,system-notifications
+      KAFKA_GROUP_ID: tms-audit
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      PG_DSN: ${PG_DSN}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  consumer-notifications:
+    build: ./kafka
+    container_name: consumer-notifications
+    env_file: [.env]
+    environment:
+      ROLE: notifications
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPICS: task-events,system-notifications
+      KAFKA_GROUP_ID: tms-notifications
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      REDIS_URL: redis://${REDIS_HOST}:${REDIS_PORT}/1
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  consumer-analytics:
+    build: ./kafka
+    container_name: consumer-analytics
+    env_file: [.env]
+    environment:
+      ROLE: analytics
+      KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_BOOTSTRAP_SERVERS}
+      KAFKA_TOPICS: analytics-events,task-events
+      KAFKA_GROUP_ID: tms-analytics
+      KAFKA_AUTO_OFFSET_RESET: earliest
+      REDIS_URL: ${ANALYTICS_REDIS_URL}
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
 volumes:
   db_data:
+  flower-data:
   reports_data:
   celery_beat_data:
   zookeeper-data:
