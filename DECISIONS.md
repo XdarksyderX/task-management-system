@@ -5,21 +5,61 @@
 ### A1) Project Layout & Ownership
 
 ```
-
-/apps
-/users
-/api/            # DRF endpoints (views, serializers, urls)
-views.py         # SSR views (minimal)
-templates/users/
-producer/        # domain events (transport-agnostic)
-/tasks
-/api/
-views.py
-templates/tasks/
-producer/
-/common
-events/          # EventPublisher interface + factory
-kafka/           # shared Kafka config (when enabled)
+.
+├── DECISIONS.md
+├── docker-compose.yml
+├── README.md
+├── django_backend
+│   ├── apps
+│   │   ├── common
+│   │   ├── tasks
+│   │   └── users
+│   ├── config
+│   │   ├── asgi.py
+│   │   ├── celery.py
+│   │   ├── keys
+│   │   ├── settings.py
+│   │   ├── urls.py
+│   │   └── wsgi.py
+│   ├── Dockerfile
+│   ├── manage.py
+│   ├── requirements.txt
+│   ├── scripts
+│   │   ├── entrypoint.sh
+│   │   ├── keygen.sh
+│   │   ├── run_tests.sh
+│   │   └── seed.sh
+│   └── templates
+│       ├── analytics
+│       ├── dashboard.html
+│       └── landing.html
+├── docs
+│   ├── API_DOCUMENTATION.md
+│   ├── ARCHITECTURE.md
+│   └── ASYNC.md
+├── flask_analytics
+│   ├── app.py
+│   ├── Dockerfile
+│   ├── entrypoint.sh
+│   ├── events
+│   │   ├── analytics_events.py
+│   │   ├── base.py
+│   │   ├── kafka_publisher.py
+│   │   ├── memory_publisher.py
+│   │   └── redis_publisher.py
+│   ├── init_db.py
+│   ├── jwt_auth.py
+│   ├── KAFKA_DEBUG_REPORT.md
+│   ├── requirements.txt
+│   ├── tasks.py
+│   ├── test_events.py
+│   ├── test_events_simple.py
+│   ├── test_kafka_debug.py
+│   └── tests.py
+├── kafka
+│   ├── consumers.py
+│   ├── Dockerfile
+│   └── requirements.txt
 
 ```
 
